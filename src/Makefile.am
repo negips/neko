@@ -307,6 +307,12 @@ if ENABLE_ADIOS2
 #	io/adios2_example.o
 endif
 
+if ENABLE_P4EST
+#
+# Place for p4est and sc related stuff
+#
+endif
+
 
 bin_PROGRAMS = neko
 neko_SOURCES = $(libneko_a_SOURCES) driver.f90

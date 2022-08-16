@@ -141,6 +141,13 @@ fi
 # Checks for ADIOS2
 AX_ADIOS2
 
+# Checks for p4est and sc
+AX_P4EST
+if test "${P4EST_LIBS}"; then
+   LIBS="$P4EST_LIBS $LIBS"
+   found_p4est="yes"
+fi
+
 # Select Working precision of REAL
 if test "x$enable_real" = xsp; then
    AC_SUBST(NEKO_REAL_TYPE, "sp")
@@ -210,6 +217,7 @@ fi
 
 AM_CONDITIONAL([ENABLE_PARMETIS], [test "x$found_domain_decomp" = xyes])
 AM_CONDITIONAL([ENABLE_ADIOS2], [test "x${have_adios2}" = xyes])
+AM_CONDITIONAL([ENABLE_P4EST], [test "x${found_p4est}" = xyes])
 AM_CONDITIONAL([ENABLE_CUDA], [test "x${have_cuda}" = xyes])
 AM_CONDITIONAL([ENABLE_HIP], [test "x${have_hip}" = xyes])
 AM_CONDITIONAL([ENABLE_OPENCL], [test "x${have_opencl}" = xyes])
