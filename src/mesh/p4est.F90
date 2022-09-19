@@ -293,161 +293,161 @@ module p4est
 
   interface
 
-     subroutine wp4est_init(fmpicomm,catch_signals,print_backtrace,log_threshold) &
-          & bind(c, name='wp4est_init')
+     subroutine wp4est_init(fmpicomm, catch_signals, print_backtrace, log_threshold) &
+          & bind(c, name = 'wp4est_init')
        USE, INTRINSIC :: ISO_C_BINDING
        integer(c_int), value :: fmpicomm, catch_signals, print_backtrace, log_threshold
      end subroutine wp4est_init
 
-     subroutine wp4est_finalize(log_priority) bind(c, name='wp4est_finalize')
+     subroutine wp4est_finalize(log_priority) bind(c, name = 'wp4est_finalize')
        USE, INTRINSIC :: ISO_C_BINDING
        integer(c_int), value :: log_priority
      end subroutine wp4est_finalize
 
-     subroutine wp4est_cnn_del() bind(c, name='wp4est_cnn_del')
+     subroutine wp4est_cnn_del() bind(c, name = 'wp4est_cnn_del')
        USE, INTRINSIC :: ISO_C_BINDING
      end subroutine wp4est_cnn_del
 
-     subroutine wp4est_cnn_valid(is_valid) bind(c, name='wp4est_cnn_valid')
+     subroutine wp4est_cnn_valid(is_valid) bind(c, name = 'wp4est_cnn_valid')
        USE, INTRINSIC :: ISO_C_BINDING
        integer(c_int) :: is_valid
      end subroutine wp4est_cnn_valid
 
-     subroutine wp4est_tree_del() bind(c, name='wp4est_tree_del')
+     subroutine wp4est_tree_del() bind(c, name = 'wp4est_tree_del')
        USE, INTRINSIC :: ISO_C_BINDING
      end subroutine wp4est_tree_del
 
-     subroutine wp4est_tree_valid(is_valid) bind(c, name='wp4est_tree_valid')
+     subroutine wp4est_tree_valid(is_valid) bind(c, name = 'wp4est_tree_valid')
        USE, INTRINSIC :: ISO_C_BINDING
        integer(c_int) :: is_valid
      end subroutine wp4est_tree_valid
 
-     subroutine wp4est_tree_save(save_data,filename) bind(c, name='wp4est_tree_save')
+     subroutine wp4est_tree_save(save_data,filename) bind(c, name = 'wp4est_tree_save')
        USE, INTRINSIC :: ISO_C_BINDING
        integer(c_int), value :: save_data
        character(kind=c_char), dimension(*) :: filename
      end subroutine wp4est_tree_save
 
-     subroutine wp4est_tree_load(fmpicomm,load_data,filename) bind(c, name='wp4est_tree_load')
+     subroutine wp4est_tree_load(fmpicomm, load_data, filename) bind(c, name = 'wp4est_tree_load')
        USE, INTRINSIC :: ISO_C_BINDING
        integer(c_int), value :: fmpicomm, load_data
        character(kind=c_char), dimension(*) :: filename
      end subroutine wp4est_tree_load
 
-     subroutine wp4est_ghost_new() bind(c, name='wp4est_ghost_new')
+     subroutine wp4est_ghost_new() bind(c, name = 'wp4est_ghost_new')
        USE, INTRINSIC :: ISO_C_BINDING
      end subroutine wp4est_ghost_new
 
-     subroutine wp4est_ghost_del() bind(c, name='wp4est_ghost_del')
+     subroutine wp4est_ghost_del() bind(c, name = 'wp4est_ghost_del')
        USE, INTRINSIC :: ISO_C_BINDING
      end subroutine wp4est_ghost_del
 
-     subroutine wp4est_mesh_new() bind(c, name='wp4est_mesh_new')
+     subroutine wp4est_mesh_new() bind(c, name = 'wp4est_mesh_new')
        USE, INTRINSIC :: ISO_C_BINDING
      end subroutine wp4est_mesh_new
 
-     subroutine wp4est_mesh_del() bind(c, name='wp4est_mesh_del')
+     subroutine wp4est_mesh_del() bind(c, name = 'wp4est_mesh_del')
        USE, INTRINSIC :: ISO_C_BINDING
      end subroutine wp4est_mesh_del
 
-     subroutine wp4est_nodes_new() bind(c, name='wp4est_nodes_new')
+     subroutine wp4est_nodes_new() bind(c, name = 'wp4est_nodes_new')
        USE, INTRINSIC :: ISO_C_BINDING
      end subroutine wp4est_nodes_new
 
-     subroutine wp4est_nodes_del() bind(c, name='wp4est_nodes_del')
+     subroutine wp4est_nodes_del() bind(c, name = 'wp4est_nodes_del')
        USE, INTRINSIC :: ISO_C_BINDING
      end subroutine wp4est_nodes_del
 
-     subroutine wp4est_lnodes_new(degree) bind(c, name='wp4est_lnodes_new')
+     subroutine wp4est_lnodes_new(degree) bind(c, name = 'wp4est_lnodes_new')
        USE, INTRINSIC :: ISO_C_BINDING
        integer(c_int), value :: degree
      end subroutine wp4est_lnodes_new
 
-     subroutine wp4est_lnodes_del() bind(c, name='wp4est_lnodes_del')
+     subroutine wp4est_lnodes_del() bind(c, name = 'wp4est_lnodes_del')
        USE, INTRINSIC :: ISO_C_BINDING
      end subroutine wp4est_lnodes_del
 
-     subroutine wp4est_part(partforcoarsen) bind(c, name='wp4est_part')
+     subroutine wp4est_part(partforcoarsen) bind(c, name = 'wp4est_part')
        USE, INTRINSIC :: ISO_C_BINDING
        integer(c_int), value :: partforcoarsen
      end subroutine wp4est_part
 
-      subroutine wp4est_bc_check() bind(c, name='wp4est_bc_check')
+      subroutine wp4est_bc_check() bind(c, name = 'wp4est_bc_check')
        USE, INTRINSIC :: ISO_C_BINDING
      end subroutine wp4est_bc_check
 
-     subroutine wp4est_msh_get_size(mdim,nelgt,nelgto,nelt,nelv,maxl) &
-          &bind(c, name='wp4est_msh_get_size')
+     subroutine wp4est_msh_get_size(mdim, nelgt, nelgto, nelt, nelv, maxl) &
+          & bind(c, name = 'wp4est_msh_get_size')
        USE, INTRINSIC :: ISO_C_BINDING
-       integer(c_int) :: mdim,nelv,maxl
+       integer(c_int) :: mdim, nelv, maxl
        integer(c_int32_t) :: nelt
-       integer(c_int64_t) :: nelgt,nelgto
+       integer(c_int64_t) :: nelgt, nelgto
      end subroutine wp4est_msh_get_size
 
-     subroutine wp4est_nds_get_size(nowin,nowsh,oowin,nin,nhf,nhe) &
-          &bind(c, name='wp4est_nds_get_size')
+     subroutine wp4est_nds_get_size(nowin, nowsh, oowin, nin, nhf, nhe) &
+          & bind(c, name = 'wp4est_nds_get_size')
        USE, INTRINSIC :: ISO_C_BINDING
-       integer(c_int) :: nowin,nowsh,oowin,nin,nhf,nhe
+       integer(c_int) :: nowin, nowsh, oowin, nin, nhf, nhe
      end subroutine wp4est_nds_get_size
 
-     subroutine wp4est_nds_get_ind(nglid,nown,ncoord)&
-          &bind(c, name='wp4est_nds_get_ind')
+     subroutine wp4est_nds_get_ind(nglid, nown, ncoord)&
+          & bind(c, name = 'wp4est_nds_get_ind')
        USE, INTRINSIC :: ISO_C_BINDING
-       type(c_ptr), value :: nglid,nown,ncoord
+       type(c_ptr), value :: nglid, nown, ncoord
      end subroutine wp4est_nds_get_ind
 
-     subroutine wp4est_nds_get_hfc(depend,ncoord)&
-          &bind(c, name='wp4est_nds_get_hfc')
+     subroutine wp4est_nds_get_hfc(depend, ncoord)&
+          & bind(c, name = 'wp4est_nds_get_hfc')
        USE, INTRINSIC :: ISO_C_BINDING
-       type(c_ptr), value :: depend,ncoord
+       type(c_ptr), value :: depend, ncoord
      end subroutine wp4est_nds_get_hfc
 
-     subroutine wp4est_nds_get_hed(depend,ncoord)&
-          &bind(c, name='wp4est_nds_get_hed')
+     subroutine wp4est_nds_get_hed(depend, ncoord)&
+          & bind(c, name = 'wp4est_nds_get_hed')
        USE, INTRINSIC :: ISO_C_BINDING
-       type(c_ptr), value :: depend,ncoord
+       type(c_ptr), value :: depend, ncoord
      end subroutine wp4est_nds_get_hed
 
      subroutine wp4est_nds_get_vmap(vmap)&
-          &bind(c, name='wp4est_nds_get_vmap')
+          & bind(c, name = 'wp4est_nds_get_vmap')
        USE, INTRINSIC :: ISO_C_BINDING
        type(c_ptr), value :: vmap
      end subroutine wp4est_nds_get_vmap
 
-     subroutine wp4est_elm_get_dat(gidx,level,igrp,crv,bc,coord,falg) &
-          &bind(c, name='wp4est_elm_get_dat')
+     subroutine wp4est_elm_get_dat(gidx, level, igrp, crv, bc, coord, falg) &
+          & bind(c, name = 'wp4est_elm_get_dat')
        USE, INTRINSIC :: ISO_C_BINDING
-       type(c_ptr), value :: gidx,level,igrp,crv,bc,coord,falg
+       type(c_ptr), value :: gidx, level, igrp, crv, bc, coord, falg
      end subroutine wp4est_elm_get_dat
 
-     subroutine wp4est_elm_get_lnode(lnnum,lnown,lnoff,lnodes) &
-          &bind(c, name='wp4est_elm_get_lnode')
+     subroutine wp4est_elm_get_lnode(lnnum, lnown, lnoff, lnodes) &
+          & bind(c, name = 'wp4est_elm_get_lnode')
        USE, INTRINSIC :: ISO_C_BINDING
-       integer(c_int) :: lnnum,lnown
+       integer(c_int) :: lnnum, lnown
        integer(c_int64_t) :: lnoff
        type(c_ptr), value :: lnodes
      end subroutine wp4est_elm_get_lnode
 
-     subroutine wp4est_sharers_get_size(nrank,nshare) &
-          &bind(c, name='wp4est_sharers_get_size')
+     subroutine wp4est_sharers_get_size(nrank, nshare) &
+          & bind(c, name = 'wp4est_sharers_get_size')
        USE, INTRINSIC :: ISO_C_BINDING
-       integer(c_int) :: nrank,nshare
+       integer(c_int) :: nrank, nshare
      end subroutine wp4est_sharers_get_size
 
-     subroutine wp4est_sharers_get_ind(nglid,lrank,loff,lshare) &
-          &bind(c, name='wp4est_sharers_get_ind')
+     subroutine wp4est_sharers_get_ind(nglid, lrank, loff, lshare) &
+          & bind(c, name = 'wp4est_sharers_get_ind')
        USE, INTRINSIC :: ISO_C_BINDING
-       type(c_ptr), value :: nglid,lrank,loff,lshare
+       type(c_ptr), value :: nglid, lrank, loff, lshare
      end subroutine wp4est_sharers_get_ind
 
-     subroutine wp4est_hang_get_info(hang_elm,hang_fsc,hang_edg) &
-          &bind(c, name='wp4est_hang_get_info')
+     subroutine wp4est_hang_get_info(hang_elm, hang_fsc, hang_edg) &
+          & bind(c, name = 'wp4est_hang_get_info')
        USE, INTRINSIC :: ISO_C_BINDING
-       type(c_ptr), value :: hang_elm,hang_fsc,hang_edg
+       type(c_ptr), value :: hang_elm, hang_fsc, hang_edg
      end subroutine wp4est_hang_get_info
 
-     subroutine wp4est_fml_get_info(family,nelf) &
-          &bind(c, name='wp4est_fml_get_info')
+     subroutine wp4est_fml_get_info(family, nelf) &
+          & bind(c, name = 'wp4est_fml_get_info')
        USE, INTRINSIC :: ISO_C_BINDING
        type(c_ptr), value :: family
        integer(c_int) :: nelf
@@ -646,8 +646,8 @@ contains
 
        associate(dim=>p4%dim, nelv=>p4%elem%nelv)
          ! get mesh size and distribution information
-         call wp4est_msh_get_size(p4%dim,p4%elem%nelgt,p4%elem%nelgto, &
-              & p4%elem%nelt,p4%elem%nelv,p4%maxl)
+         call wp4est_msh_get_size(p4%dim,p4%elem%nelgt, p4%elem%nelgto, &
+              & p4%elem%nelt, p4%elem%nelv, p4%maxl)
          ! get max refinement level across all ranks 
          call MPI_Allreduce(p4%maxl, p4%maxg, 1, &
               MPI_INTEGER, MPI_MAX, NEKO_COMM, ierr)
@@ -671,9 +671,9 @@ contains
                     & p4%indn%lnum))
                call wp4est_nds_get_ind(c_loc(itmp8v1), &
                     & c_loc(itmp4v1),c_loc(rtmpv1))
-               call MOVE_ALLOC(itmp8v1,p4%indn%gidx)
-               call MOVE_ALLOC(itmp4v1,p4%indn%ndown)
-               call MOVE_ALLOC(rtmpv1,p4%indn%coord)
+               call MOVE_ALLOC(itmp8v1, p4%indn%gidx)
+               call MOVE_ALLOC(itmp4v1, p4%indn%ndown)
+               call MOVE_ALLOC(rtmpv1, p4%indn%coord)
             end if
 
             ! get hanging node info; for refined mesh only
@@ -681,88 +681,88 @@ contains
                if (dim == 2) then
                   if (p4%fchn%lnum > 0) then
                      ! each face hanging node is defined by 2 independent nodes
-                     allocate(itmp4v21(2,p4%fchn%lnum), &
-                          & rtmpv1(dim,p4%fchn%lnum))
-                     call wp4est_nds_get_hfc(c_loc(itmp4v21),c_loc(rtmpv1))
-                     call MOVE_ALLOC(itmp4v21,p4%fchn%lmap)
-                     call MOVE_ALLOC(rtmpv1,p4%fchn%coord)
+                     allocate(itmp4v21(2, p4%fchn%lnum), &
+                          & rtmpv1(dim, p4%fchn%lnum))
+                     call wp4est_nds_get_hfc(c_loc(itmp4v21), c_loc(rtmpv1))
+                     call MOVE_ALLOC(itmp4v21, p4%fchn%lmap)
+                     call MOVE_ALLOC(rtmpv1, p4%fchn%coord)
                   end if
                else if (dim == 3) then
                   if (p4%fchn%lnum > 0) then
                      ! each face hanging node is defined by 4 independent nodes
-                     allocate(itmp4v21(4,p4%fchn%lnum), &
-                          & rtmpv1(p4%dim,p4%fchn%lnum))
-                     call wp4est_nds_get_hfc(c_loc(itmp4v21),c_loc(rtmpv1))
-                     call MOVE_ALLOC(itmp4v21,p4%fchn%lmap)
-                     call MOVE_ALLOC(rtmpv1,p4%fchn%coord)
+                     allocate(itmp4v21(4, p4%fchn%lnum), &
+                          & rtmpv1(p4%dim, p4%fchn%lnum))
+                     call wp4est_nds_get_hfc(c_loc(itmp4v21), c_loc(rtmpv1))
+                     call MOVE_ALLOC(itmp4v21, p4%fchn%lmap)
+                     call MOVE_ALLOC(rtmpv1, p4%fchn%coord)
                   end if
                   if (p4%edhn%lnum > 0) then
                      ! each edge hanging node is defined by 2 independent nodes
-                     allocate(itmp4v21(2,p4%edhn%lnum), &
-                          & rtmpv1(p4%dim,p4%edhn%lnum))
-                     call wp4est_nds_get_hed(c_loc(itmp4v21),c_loc(rtmpv1))
-                     call MOVE_ALLOC(itmp4v21,p4%edhn%lmap)
-                     call MOVE_ALLOC(rtmpv1,p4%edhn%coord)
+                     allocate(itmp4v21(2, p4%edhn%lnum), &
+                          & rtmpv1(p4%dim, p4%edhn%lnum))
+                     call wp4est_nds_get_hed(c_loc(itmp4v21), c_loc(rtmpv1))
+                     call MOVE_ALLOC(itmp4v21, p4%edhn%lmap)
+                     call MOVE_ALLOC(rtmpv1, p4%edhn%coord)
                   end if
                end if
             end if
 
             ! get element vertex mapping to nodes
-            allocate(itmp4v21(nvert,nelv))
+            allocate(itmp4v21(nvert, nelv))
             call wp4est_nds_get_vmap(c_loc(itmp4v21))
-            call MOVE_ALLOC(itmp4v21,p4%elem%vnmap)
+            call MOVE_ALLOC(itmp4v21, p4%elem%vnmap)
 
             ! get element info
-            allocate(itmp8v1(nelv),itmp4v1(nelv),itmp4v2(nelv), &
-                 & itmp4v21(nface,nelv),itmp4v22(nface,nelv), &
-                 & rtmpv2(dim,nvert,nelv),itmp4v23(nface,nelv))
-            call wp4est_elm_get_dat(c_loc(itmp8v1),c_loc(itmp4v1), &
-                 & c_loc(itmp4v2), c_loc(itmp4v21),c_loc(itmp4v22), &
-                 &c_loc(rtmpv2),c_loc(itmp4v23))
-            call MOVE_ALLOC(itmp8v1,p4%elem%gidx)
-            call MOVE_ALLOC(itmp4v1,p4%elem%level)
-            call MOVE_ALLOC(itmp4v2,p4%elem%igrp)
-            call MOVE_ALLOC(itmp4v21,p4%elem%crv)
-            call MOVE_ALLOC(itmp4v22,p4%elem%bc)
-            call MOVE_ALLOC(itmp4v23,p4%elem%falg)
+            allocate(itmp8v1(nelv), itmp4v1(nelv), itmp4v2(nelv), &
+                 & itmp4v21(nface, nelv), itmp4v22(nface, nelv), &
+                 & rtmpv2(dim, nvert, nelv), itmp4v23(nface, nelv))
+            call wp4est_elm_get_dat(c_loc(itmp8v1), c_loc(itmp4v1), &
+                 & c_loc(itmp4v2), c_loc(itmp4v21), c_loc(itmp4v22), &
+                 & c_loc(rtmpv2), c_loc(itmp4v23))
+            call MOVE_ALLOC(itmp8v1, p4%elem%gidx)
+            call MOVE_ALLOC(itmp4v1, p4%elem%level)
+            call MOVE_ALLOC(itmp4v2, p4%elem%igrp)
+            call MOVE_ALLOC(itmp4v21, p4%elem%crv)
+            call MOVE_ALLOC(itmp4v22, p4%elem%bc)
+            call MOVE_ALLOC(itmp4v23, p4%elem%falg)
 
             ! get periodic nodes
-            call p4_node_periodic_get(p4,rtmpv2,dim,nvert,nelv)
+            call p4_node_periodic_get(p4, rtmpv2, dim, nvert, nelv)
             deallocate(rtmpv2)
 
             call wp4est_lnodes_new(1)
             ! get hanging object info; based on lnode information
-            allocate(itmp4v1(nelv),itmp4v21(nface,nelv))
+            allocate(itmp4v1(nelv), itmp4v21(nface, nelv))
             if (dim == 3) then
                nedge = 12
             else
                nedge = 0  !!!!! THIS SHOULD BE CHECKED FOR 2D SIMULATION !!!!!
             end if
-            allocate(itmp4v22(nedge,nelv))
-            call wp4est_hang_get_info(c_loc(itmp4v1),c_loc(itmp4v21), &
+            allocate(itmp4v22(nedge, nelv))
+            call wp4est_hang_get_info(c_loc(itmp4v1), c_loc(itmp4v21), &
                  & c_loc(itmp4v22))
-            call MOVE_ALLOC(itmp4v1,p4%elem%hngel)
-            call MOVE_ALLOC(itmp4v21,p4%elem%hngfc)
-            call MOVE_ALLOC(itmp4v22,p4%elem%hnged) !!!!! THIS SHOULD BE CHECKED FOR 2D SIMULATION !!!
+            call MOVE_ALLOC(itmp4v1, p4%elem%hngel)
+            call MOVE_ALLOC(itmp4v21, p4%elem%hngfc)
+            call MOVE_ALLOC(itmp4v22, p4%elem%hnged) !!!!! THIS SHOULD BE CHECKED FOR 2D SIMULATION !!!
 
             ! get global indexes of element vertices
-            allocate(itmp4v21(nvert,nelv))
+            allocate(itmp4v21(nvert, nelv))
             call wp4est_elm_get_lnode(p4%elem%vert%lnum, &
-                 & p4%elem%vert%lown,p4%elem%vert%goff, &
+                 & p4%elem%vert%lown, p4%elem%vert%goff, &
                  & c_loc(itmp4v21))
-            call MOVE_ALLOC(itmp4v21,p4%elem%vert%lmap)
+            call MOVE_ALLOC(itmp4v21, p4%elem%vert%lmap)
             call wp4est_sharers_get_size(p4%elem%vert%nrank, &
                  & p4%elem%vert%nshare)
             allocate(itmp8v1(p4%elem%vert%lnum), &
                  & itmp4v1(p4%elem%vert%nrank), &
                  & itmp4v2(p4%elem%vert%nrank+1), &
                  & itmp4v3(p4%elem%vert%nshare))
-            call wp4est_sharers_get_ind(c_loc(itmp8v1),c_loc(itmp4v1), &
+            call wp4est_sharers_get_ind(c_loc(itmp8v1), c_loc(itmp4v1), &
                  & c_loc(itmp4v2), c_loc(itmp4v3))
-            call MOVE_ALLOC(itmp8v1,p4%elem%vert%lgidx)
-            call MOVE_ALLOC(itmp4v1,p4%elem%vert%lrank)
-            call MOVE_ALLOC(itmp4v2,p4%elem%vert%loff)
-            call MOVE_ALLOC(itmp4v3,p4%elem%vert%lshare)
+            call MOVE_ALLOC(itmp8v1, p4%elem%vert%lgidx)
+            call MOVE_ALLOC(itmp4v1, p4%elem%vert%lrank)
+            call MOVE_ALLOC(itmp4v2, p4%elem%vert%loff)
+            call MOVE_ALLOC(itmp4v3, p4%elem%vert%lshare)
           
             ! get globlal number of vertices
             itmp8 = p4%elem%vert%lown
@@ -773,22 +773,22 @@ contains
 
             ! get global indexes of element faces
             call wp4est_lnodes_new(-1)
-            allocate(itmp4v21(nface,nelv))
-            call wp4est_elm_get_lnode(p4%elem%face%lnum,p4%elem%face%lown, &
+            allocate(itmp4v21(nface, nelv))
+            call wp4est_elm_get_lnode(p4%elem%face%lnum, p4%elem%face%lown, &
                  & p4%elem%face%goff, c_loc(itmp4v21))
-            call MOVE_ALLOC(itmp4v21,p4%elem%face%lmap)
+            call MOVE_ALLOC(itmp4v21, p4%elem%face%lmap)
             call wp4est_sharers_get_size(p4%elem%face%nrank, &
                  & p4%elem%face%nshare)
             allocate(itmp8v1(p4%elem%face%lnum), &
                  & itmp4v1(p4%elem%face%nrank), &
                  & itmp4v2(p4%elem%face%nrank+1), &
                  & itmp4v3(p4%elem%face%nshare))
-            call wp4est_sharers_get_ind(c_loc(itmp8v1),c_loc(itmp4v1), &
-                 & c_loc(itmp4v2),c_loc(itmp4v3))
-            call MOVE_ALLOC(itmp8v1,p4%elem%face%lgidx)
-            call MOVE_ALLOC(itmp4v1,p4%elem%face%lrank)
-            call MOVE_ALLOC(itmp4v2,p4%elem%face%loff)
-            call MOVE_ALLOC(itmp4v3,p4%elem%face%lshare)
+            call wp4est_sharers_get_ind(c_loc(itmp8v1), c_loc(itmp4v1), &
+                 & c_loc(itmp4v2), c_loc(itmp4v3))
+            call MOVE_ALLOC(itmp8v1, p4%elem%face%lgidx)
+            call MOVE_ALLOC(itmp4v1, p4%elem%face%lrank)
+            call MOVE_ALLOC(itmp4v2, p4%elem%face%loff)
+            call MOVE_ALLOC(itmp4v3, p4%elem%face%lshare)
           
             ! get globlal number of faces
             itmp8 = p4%elem%face%lown
@@ -818,11 +818,11 @@ contains
   end subroutine p4_mesh_import_data
 
   ! this subroutine should be adjusted for 2D; not done yet
-  subroutine p4_node_periodic_get(p4,vcoord,dim,nvert,nelv)
+  subroutine p4_node_periodic_get(p4, vcoord, dim, nvert, nelv)
     ! argument list
     type(p4_mesh_import_t), intent(inout) :: p4
-    integer, intent(in) :: dim,nvert,nelv
-    real(dp), dimension(dim,nvert,nelv), intent(in) :: vcoord
+    integer, intent(in) :: dim, nvert, nelv
+    real(dp), dimension(dim, nvert, nelv), intent(in) :: vcoord
     !local variables
     integer :: il, jl, kl, itmp
     integer :: nvper
@@ -842,21 +842,21 @@ contains
     nhf = nin + p4%fchn%lnum
     nhe = nhf + p4%edhn%lnum
     ! initialise htable
-    call htpts%init(4,idx)
-    allocate(pvmap(nvert,nelv),pnmap(nvert*nelv),pncoord(dim,nvert*nelv))
+    call htpts%init(4, idx)
+    allocate(pvmap(nvert, nelv), pnmap(nvert*nelv), pncoord(dim, nvert*nelv))
     pvmap = -1 
     do il = 1, nelv
        do jl = 1, nvert
           ! get element vertex coordinates
-          ptsv = point_t(vcoord(:,jl,il))
+          ptsv = point_t(vcoord(:, jl, il))
           ! get mapped node coordinates
-          nvt = p4%elem%vnmap(jl,il)
+          nvt = p4%elem%vnmap(jl, il)
           if (nvt <= nin) then
-             ptsn = point_t(p4%indn%coord(:,nvt))
+             ptsn = point_t(p4%indn%coord(:, nvt))
           else if (nvt <= nhf) then
-             ptsn = point_t(p4%fchn%coord(:,nvt-nin))
+             ptsn = point_t(p4%fchn%coord(:, nvt - nin))
           else if (nvt <= nhe) then
-             ptsn = point_t(p4%edhn%coord(:,nvt-nhf))
+             ptsn = point_t(p4%edhn%coord(:, nvt - nhf))
           else
              call neko_error('Inconsistent vnmap value.')
           end if
@@ -865,7 +865,7 @@ contains
              ! check if this vertex belongs to periodic bc
              ifvequal = .false.
              do kl = 1, dim
-                ifvequal = p4%elem%bc(p4_cface(kl,jl),il) == -1
+                ifvequal = p4%elem%bc(p4_cface(kl, jl), il) == -1
                 if (ifvequal) then
                    ! hanging nodes should not be marked periodic
                    if (nvt > nin) &
@@ -873,18 +873,18 @@ contains
                    if (htpts%get(ptsv, tmp) > 0) then
                       ! new node
                       nvper = nvper + 1
-                      idx = [nvper,nvt]
-                      call htpts%set(ptsv,idx)
+                      idx = [nvper, nvt]
+                      call htpts%set(ptsv, idx)
                       call ptsv%set_id(nvper)
-                      pvmap(jl,il) = nvper ! vertex to periodic node mapping
+                      pvmap(jl, il) = nvper ! vertex to periodic node mapping
                       pnmap(nvper) = nvt ! periodic node to independent node mapping
-                      pncoord(1:dim,nvper) = ptsv%x(1:dim) ! periodic node coordinates
+                      pncoord(1:dim, nvper) = ptsv%x(1:dim) ! periodic node coordinates
                    else
                       ! exisitng node
                       ! check mapping consistency
                       if (nvt /= tmp%x(2)) &
                            & call neko_error('Inconsistent mapping of per. nodes to indep. nodes.')
-                      pvmap(jl,il) = tmp%x(1) ! vertex to periodic node mapping
+                      pvmap(jl, il) = tmp%x(1) ! vertex to periodic node mapping
                    end if
                    exit
                 end if
@@ -898,23 +898,23 @@ contains
 
     ! put data to the type
     p4%pern%lnum = nvper
-    allocate(p4%pern%lmap(nvper),p4%pern%coord(dim,nvper))
+    allocate(p4%pern%lmap(nvper), p4%pern%coord(dim, nvper))
     p4%pern%lmap(1:nvper) = pnmap(1:nvper)
-    p4%pern%coord(:,1:nvper) = pncoord(:,1:nvper)
+    p4%pern%coord(:,1:nvper) = pncoord(:, 1:nvper)
 
     ! update vertex to node mapping array
     do il = 1, nelv
        do jl = 1, nvert
-          if (pvmap(jl,il) == -1) then
-             if (p4%elem%vnmap(jl,il) > nin) &
-                  & p4%elem%vnmap(jl,il) = p4%elem%vnmap(jl,il) + nvper
+          if (pvmap(jl, il) == -1) then
+             if (p4%elem%vnmap(jl, il) > nin) &
+                  & p4%elem%vnmap(jl, il) = p4%elem%vnmap(jl, il) + nvper
           else
-             p4%elem%vnmap(jl,il) = pvmap(jl,il)
+             p4%elem%vnmap(jl, il) = pvmap(jl, il)
           end if
        end do
     end do
 
-    deallocate(pvmap,pnmap,pncoord)
+    deallocate(pvmap, pnmap, pncoord)
     call htpts%free()
 
     return
@@ -943,26 +943,26 @@ contains
        associate(nelv=>p4%elem%nelv, lnum=>p4%elem%edge%lnum, lown=>p4%elem%edge%lown, &
             & nrank=>p4%elem%edge%nrank, nshare=>p4%elem%edge%nshare)
          ! import from p4est combined face and edge information
-         allocate(felmap(nface+nedge,nelv))
+         allocate(felmap(nface+nedge, nelv))
          call wp4est_lnodes_new(-2)
-         call wp4est_elm_get_lnode(felnum,felown,feloff,c_loc(felmap))
-         call wp4est_sharers_get_size(fenrank,fenshare)
-         allocate(felgidx(felnum),felrank(fenrank),feloffs(fenrank+1), &
+         call wp4est_elm_get_lnode(felnum, felown, feloff, c_loc(felmap))
+         call wp4est_sharers_get_size(fenrank, fenshare)
+         allocate(felgidx(felnum), felrank(fenrank), feloffs(fenrank+1), &
               & felshare(fenshare))
-         call wp4est_sharers_get_ind(c_loc(felgidx),c_loc(felrank),c_loc(feloffs), &
+         call wp4est_sharers_get_ind(c_loc(felgidx), c_loc(felrank), c_loc(feloffs), &
               & c_loc(felshare))
          call wp4est_lnodes_del()
 
          ! extract local edge mapping
-         allocate(esort(nedge*nelv),eind(nedge*nelv),eoffset(nedge*nelv+1))
+         allocate(esort(nedge*nelv), eind(nedge*nelv), eoffset(nedge*nelv+1))
          do il = 1, nelv
             do jl = 1, nedge
-               esort((il-1)*nedge + jl) = felmap(nface + jl,il)
+               esort((il-1)*nedge + jl) = felmap(nface + jl, il)
             end do
          end do
          ! sort edge mapping
          itmp = nedge*nelv
-         call sorti4(esort,eind,itmp)
+         call sorti4(esort, eind, itmp)
          ! compress the list removing multiplicities
          nlnode = 1
          last = esort(1)
@@ -1012,7 +1012,7 @@ contains
                else
                   kl = kl + 1
                end if
-               if ((jl == feloffs(il+1)).or.(kl>nlnode)) then
+               if ((jl == feloffs(il+1)).or.(kl > nlnode)) then
                   eloffs(il+1) = fenshare
                   exit
                end if
@@ -1022,7 +1022,7 @@ contains
          fenshare = fenshare-1
 
          ! start communication
-         allocate(rbuf(2,fenshare),sbuf(2,fenshare),request(fenrank),status(fenrank))
+         allocate(rbuf(2, fenshare), sbuf(2, fenshare), request(fenrank), status(fenrank))
          ! set non-blocking receive counting ranks
          itmp = 0
          kl = 0
@@ -1032,8 +1032,8 @@ contains
                if (felrank(il) < pe_rank) then ! receive from ranks with lower id only
                   kl = kl + 1 ! count messages
                   jl = 2*(eloffs(il+1) - eloffs(il))
-                  call MPI_IRecv(rbuf(:,eloffs(il):eloffs(il+1)-1),jl,MPI_INTEGER, &
-                       & felrank(il),jl,NEKO_COMM,request(kl),ierr)
+                  call MPI_IRecv(rbuf(:, eloffs(il):eloffs(il+1)-1), jl, MPI_INTEGER, &
+                       & felrank(il), jl, NEKO_COMM, request(kl), ierr)
                end if
             end if
          end do
@@ -1047,8 +1047,8 @@ contains
          p4%elem%edge%nshare = fenshare
 
          ! allocate arrays
-         allocate(p4%elem%edge%lmap(nedge,nelv),p4%elem%edge%lgidx(lnum), &
-              & p4%elem%edge%lrank(nrank),p4%elem%edge%loff(nrank+1), &
+         allocate(p4%elem%edge%lmap(nedge, nelv), p4%elem%edge%lgidx(lnum), &
+              & p4%elem%edge%lrank(nrank), p4%elem%edge%loff(nrank+1), &
               & p4%elem%edge%lshare(nshare))
 
          ! copy shared rank and offset
@@ -1086,8 +1086,8 @@ contains
                   sbuf(2,jl) = p4%elem%edge%lgidx(p4%elem%edge%lshare(jl))  ! new global number
                end do
                jl = 2*(p4%elem%edge%loff(il+1) - p4%elem%edge%loff(il))
-               call MPI_Send(sbuf(:,p4%elem%edge%loff(il):p4%elem%edge%loff(il+1)-1), &
-                    & jl,MPI_INTEGER,p4%elem%edge%lrank(il),jl,NEKO_COMM, ierr)
+               call MPI_Send(sbuf(:, p4%elem%edge%loff(il):p4%elem%edge%loff(il+1)-1), &
+                    & jl, MPI_INTEGER, p4%elem%edge%lrank(il), jl, NEKO_COMM, ierr)
             end if
          end do
 
@@ -1104,15 +1104,15 @@ contains
          itmp = nedge*nelv
          call reordi4(eloffs, eind, itmp)
          ! copy data
-         do il = 1,nelv
+         do il = 1, nelv
             do jl = 1, nedge
-               p4%elem%edge%lmap(jl,il) = eloffs((il-1)*nedge + jl)
+               p4%elem%edge%lmap(jl, il) = eloffs((il-1)*nedge + jl)
             end do
          end do
 
          ! finalize communication
          ! this could be more fancy, but most probably the gain would be minimal
-         call MPI_Waitall(kl,request,status,ierr)
+         call MPI_Waitall(kl, request, status, ierr)
 
          ! fill in missing global id for shared edges
          do il=1, nrank
@@ -1123,16 +1123,16 @@ contains
                   else if (p4%elem%edge%lshare(jl) > lown) then ! shared nodes
                      if (p4%elem%edge%lgidx(p4%elem%edge%lshare(jl)) == -1) then ! renumber
                         if (felgidx(esort(p4%elem%edge%lshare(jl))) == &
-                             & rbuf(1,jl)) then ! correct old global id
+                             & rbuf(1, jl)) then ! correct old global id
                            p4%elem%edge%lgidx(p4%elem%edge%lshare(jl)) = &
-                                & rbuf(2,jl)
+                                & rbuf(2, jl)
                         else
                            call neko_error('Invalid old global id for edges; 1')
                         end if
                      else ! node already set
                         if (felgidx(esort(p4%elem%edge%lshare(jl))) == &
-                             & rbuf(1,jl)) then ! correct old global id
-                           if (rbuf(2,jl) /= -1) &
+                             & rbuf(1, jl)) then ! correct old global id
+                           if (rbuf(2, jl) /= -1) &
                                 & call neko_error('Invalid global id for shared edges; this one shoud not be set yet')
                         else
                            call neko_error('Invalid old global id for edges; 2')
@@ -1155,21 +1155,21 @@ contains
 
          ! get global edge orientation based on vertex global number
          ! this is just an easy (dirty) and temporary hack, and will be changed in the future !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-         allocate(p4%elem%ealg(nedge,nelv))
-         do il = 1,nelv
+         allocate(p4%elem%ealg(nedge, nelv))
+         do il = 1, nelv
             do jl = 1, nedge
-               if (p4%elem%vert%lmap(p4_vedge(1,jl),il) < &
-                    & p4%elem%vert%lmap(p4_vedge(2,jl),il)) then
-                  p4%elem%ealg(jl,il) = 0
+               if (p4%elem%vert%lmap(p4_vedge(1, jl), il) < &
+                    & p4%elem%vert%lmap(p4_vedge(2, jl), il)) then
+                  p4%elem%ealg(jl, il) = 0
                else
-                  p4%elem%ealg(jl,il) = 1
+                  p4%elem%ealg(jl, il) = 1
                end if
             end do
          end do
 
-         deallocate(felmap,felgidx,felrank,feloffs,felshare,esort,eind, &
-              & eoffset,eloffs)
-         deallocate(rbuf,sbuf,request,status)
+         deallocate(felmap, felgidx, felrank, feloffs, felshare, esort, eind, &
+              & eoffset, eloffs)
+         deallocate(rbuf, sbuf, request, status)
        end associate
     end if
 
@@ -1191,29 +1191,29 @@ contains
     ! import family mark
     associate(dim=>p4%dim, nelv=>p4%elem%nelv)
       allocate(itmp4v1(nelv))
-      call wp4est_fml_get_info(c_loc(itmp4v1),nlfam)
+      call wp4est_fml_get_info(c_loc(itmp4v1), nlfam)
 
       ! test number of families; it must be multiply of number of vertices
       nvert = 2**dim
-      if ((nlfam > nelv).or.(mod(nlfam,nvert) /= 0)) &
+      if ((nlfam > nelv).or.(mod(nlfam, nvert) /= 0)) &
            & call neko_error('Invalid number of families.')
 
       ! get global family offset
       nlfam = nlfam/nvert
       itmp8 = nlfam
-      call MPI_Scan(itmp8, nlfam_off,1,MPI_INTEGER8,MPI_SUM,NEKO_COMM,ierr)
+      call MPI_Scan(itmp8, nlfam_off, 1, MPI_INTEGER8, MPI_SUM, NEKO_COMM, ierr)
       nlfam_off = nlfam_off - itmp8
 
       ! mark all local families
-      allocate(p4%elem%fmlm(2,nelv))
+      allocate(p4%elem%fmlm(2, nelv))
       p4%elem%fmlm = 0
-      do il=1,nlfam
+      do il=1, nlfam
          nlfam_off = nlfam_off + 1
          do jl = 1, nvert
             itmp8 = itmp4v1(jl + (il-1)*nvert) - p4%elem%nelgto
             ! one could test if 0<itmp8<=nelv
-            p4%elem%fmlm(1,int(itmp8,i4)) = nlfam_off
-            p4%elem%fmlm(1,int(itmp8,i4)) = nvert + 1 - jl
+            p4%elem%fmlm(1, int(itmp8,i4)) = nlfam_off
+            p4%elem%fmlm(1, int(itmp8,i4)) = nvert + 1 - jl
          end do
       end do
     end associate
@@ -1225,7 +1225,8 @@ contains
 
 #else
   
-  subroutine p4_init(log_threshold)
+  subroutine p4_init(mesh_file, log_threshold)
+    character(len=*), intent(in) :: mesh_file
     integer, intent(in), optional :: log_threshold
 
     call neko_error('NEKO needs to be built with P4EST support')
@@ -1248,20 +1249,20 @@ contains
   ! Following stuff should be in math, but right now there is no clear division of routines as
   ! flipv, swap and reord are not in math. For now I leave it here
   !> Use Heap Sort (p 231 Num. Rec., 1st Ed.)
-  subroutine sorti4(a,ind,n)
+  subroutine sorti4(a, ind, n)
     integer, intent(in) :: n
     integer(i4), intent(inout) :: a(n)
     integer, intent(inout) :: ind(n)
     integer(i4) :: aa
     integer :: j, ir, i, ii, l
     do j = 1, n
-       ind(j)=j
+       ind(j) = j
     end do
 
     if (n.le.1) return
     
-    l=n/2+1
-    ir=n
+    l = n/2+1
+    ir = n
     do while (.true.) 
        if (l.gt.1) then
           l=l-1
