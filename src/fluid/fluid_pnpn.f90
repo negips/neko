@@ -119,12 +119,13 @@ contains
     class(fluid_pnpn_t), target, intent(inout) :: this
     type(mesh_t), target, intent(inout) :: msh
     integer, intent(inout) :: lx
-    type(param_t), target, intent(inout) :: param    
+    type(param_t), target, intent(inout) :: param
+    character(len=15), parameter :: scheme = 'Modular (Pn/Pn)'
 
     call this%free()
     
     ! Setup velocity and pressure fields on the space \f$ Xh \f$
-    call this%scheme_init(msh, lx, param, .true., .true.)
+    call this%scheme_init(msh, lx, param, .true., .true., scheme)
 
     ! Setup backend dependent Ax routines
     call ax_helm_factory(this%ax)
@@ -253,7 +254,10 @@ contains
     call bc_list_add(this%bclst_dw, this%bc_vel_res)
 
     !Intialize projection space thingy
-    call this%proj_prs%init(this%dm_Xh%n_dofs, param%proj_prs_dim)
+    if (param%proj_prs_dim .gt. 0) then
+       call this%proj_prs%init(this%dm_Xh%n_dofs, param%proj_prs_dim)
+    end if
+    
     if (param%proj_vel_dim .gt. 0) then
        call this%proj_u%init(this%dm_Xh%n_dofs, param%proj_vel_dim)
        call this%proj_v%init(this%dm_Xh%n_dofs, param%proj_vel_dim)
