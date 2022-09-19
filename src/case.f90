@@ -53,6 +53,7 @@ module case
   use abbdf
   use logger
   use jobctrl
+  use p4est
   use user_intf  
   implicit none
 
@@ -85,14 +86,15 @@ contains
     character(len=80) :: source_term = ''
     character(len=80) :: initial_condition = ''
     integer :: lx = 0
+    logical :: amr = .false.
     type(param_io_t) :: params
     namelist /NEKO_CASE/ mesh_file, fluid_scheme, lx,  &
-         source_term, initial_condition
+         source_term, initial_condition, amr
     
     integer :: ierr
     type(file_t) :: msh_file, bdry_file, part_file
     type(mesh_fld_t) :: msh_part
-    integer, parameter :: nbytes = NEKO_FNAME_LEN + 240 + 8
+    integer, parameter :: nbytes = NEKO_FNAME_LEN + 240 + 8 + 4
     character buffer(nbytes)
     integer :: pack_index
     type(mesh_fld_t) :: parts
@@ -121,6 +123,8 @@ contains
             buffer, nbytes, pack_index, NEKO_COMM, ierr)
        call MPI_Pack(lx, 1, MPI_INTEGER, &
             buffer, nbytes, pack_index, NEKO_COMM, ierr)
+       call MPI_Pack(amr, 1, MPI_LOGICAL, &
+            buffer, nbytes, pack_index, NEKO_COMM, ierr)
        call MPI_Bcast(buffer, nbytes, MPI_PACKED, 0, NEKO_COMM, ierr)
        call MPI_Bcast(params%p, 1, MPI_NEKO_PARAMS, 0, NEKO_COMM, ierr)
     else
@@ -137,11 +141,30 @@ contains
             initial_condition, 80, MPI_CHARACTER, NEKO_COMM, ierr)
        call MPI_Unpack(buffer, nbytes, pack_index, &
             lx, 1, MPI_INTEGER, NEKO_COMM, ierr)
+       call MPI_Unpack(buffer, nbytes, pack_index, &
+            amr, 1, MPI_LOGICAL, NEKO_COMM, ierr)
        call MPI_Bcast(params%p, 1, MPI_NEKO_PARAMS, 0, NEKO_COMM, ierr)
     end if
 
+    if (amr) then
+       ! for now everyhing is done assuming p4est to be a mesh mamager
+       call p4_init(mesh_file)
+
+       testing : block
+         type(mesh_t) :: tesing_msh
+         call p4_msh_get(tesing_msh)
+       end block testing
+
+    else
+       msh_file = file_t(trim(mesh_file))
+       call msh_file%read(C%msh)
+    end if
+
+    ! just for now
     msh_file = file_t(trim(mesh_file))
     call msh_file%read(C%msh)
+    ! just for now
+
     C%params = params%p
 
     !
@@ -301,6 +324,8 @@ contains
   !> Deallocate a case 
   subroutine case_free(C)
     type(case_t), intent(inout) :: C
+
+    call p4_finalize()
 
     if (allocated(C%fluid)) then
        call C%fluid%free()

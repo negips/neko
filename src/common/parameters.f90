@@ -75,6 +75,7 @@ module parameters
      integer :: proj_vel_dim     !< Projection space for velocity solution
      real(kind=rp) :: dong_uchar     !< Characteristic velocity for dong outflow
      real(kind=rp) :: dong_delta     !< Small constant for dong outflow
+     integer :: amrlmax              !< max refinement level
   end type param_t
 
   type param_io_t
@@ -138,6 +139,7 @@ contains
     integer :: i
     real(kind=rp) :: dong_uchar = 1.0_rp
     real(kind=rp) :: dong_delta = 0.01_rp
+    integer :: amrlmax = 0
     
     namelist /NEKO_PARAMETERS/ nsamples, output_bdry, output_part, output_chkp, &
          dt, T_end, rho, mu, Re, uinf, abstol_vel, abstol_prs, ksp_vel, ksp_prs, &
@@ -145,7 +147,7 @@ contains
          proj_prs_dim,  proj_vel_dim, time_order, jlimit, restart_file, stats_begin, &
          stats_mean_flow, output_mean_flow, stats_mean_sqr_flow, &
          output_mean_sqr_flow, output_dir, dealias, dealias_lx, &
-         delta, blasius_approx, bc_labels, dong_uchar, dong_delta
+         delta, blasius_approx, bc_labels, dong_uchar, dong_delta, amrlmax
 
     read(unit, nml=NEKO_PARAMETERS, iostat=iostat, iomsg=iomsg)
 
@@ -188,6 +190,7 @@ contains
     param%p%bc_labels = bc_labels
     param%p%dong_uchar = dong_uchar
     param%p%dong_delta = dong_delta
+    param%p%amrlmax = amrlmax
 
   end subroutine param_read
 
@@ -206,7 +209,7 @@ contains
     logical :: output_part, output_bdry, output_chkp
     logical :: avflow, loadb, stats_mean_flow, output_mean_flow
     logical :: stats_mean_sqr_flow, output_mean_sqr_flow
-    integer :: nsamples, vol_flow_dir, proj_prs_dim, proj_vel_dim, time_order
+    integer :: nsamples, vol_flow_dir, proj_prs_dim, proj_vel_dim, time_order, amrlmax
     character(len=8) :: jlimit    
     character(len=80) :: restart_file
     character(len=1024) :: output_dir
@@ -221,7 +224,7 @@ contains
          proj_prs_dim, proj_vel_dim, time_order, jlimit, restart_file, stats_begin, &
          stats_mean_flow, output_mean_flow, stats_mean_sqr_flow, &
          output_mean_sqr_flow, output_dir, dealias, dealias_lx, &
-         delta, blasius_approx, bc_labels, dong_uchar, dong_delta
+         delta, blasius_approx, bc_labels, dong_uchar, dong_delta, amrlmax
 
     nsamples = param%p%nsamples
     output_bdry = param%p%output_bdry
@@ -262,6 +265,7 @@ contains
     bc_labels = param%p%bc_labels
     dong_uchar = param%p%dong_uchar
     dong_delta = param%p%dong_delta
+    amrlmax = param%p%amrlmax
     
     write(unit, nml=NEKO_PARAMETERS, iostat=iostat, iomsg=iomsg)
         
