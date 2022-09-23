@@ -5,9 +5,12 @@ module p4est
   use logger
   use utils
   use math
-  use point
   use tuple
   use htable
+  use distdata
+  use point
+  use quad
+  use hex
   use mesh
   implicit none
 
@@ -21,7 +24,7 @@ module p4est
   ! This set of nodes does not include e.g. multiplicated nodes on periodic faces sharing the same
   ! global id in the communicator.
   type p4_node_ind_t
-     integer(i4) :: lown,lshr,loff ! number of owned independent and owned shared nodes, local offset of owned independent nodes; NOT SURE IF TESE ARE NEEDED; possibly is one would get rid of p4est
+     integer(i4) :: lown,lshr,loff ! number of owned independent and owned shared nodes, local offset of owned independent nodes; NOT SURE IF TESE ARE NEEDED; possibly if one would get rid of p4est
      integer(i4) :: lnum ! local number of independent nodes
      integer(i8), allocatable, dimension(:) :: gidx ! global indexing of unique nodes
      integer(i4), allocatable, dimension(:) :: ndown ! node owner (mpi rank)
@@ -538,14 +541,11 @@ contains
   end subroutine p4_finalize
 
   subroutine p4_msh_get(msh)
+    ! argument list
     type(mesh_t), intent(inout) :: msh
-
-    integer :: il, jl, nvert, nface
-
+    ! local variables
+    integer(i4) :: il
     
-    type(point_t) :: pts(8)
-    type(htable_pt_t) :: htp
-    integer :: pt_idx
 
     call neko_log%section("Mesh")
     ! import data from p4est
@@ -553,11 +553,121 @@ contains
        
     call neko_log%message('Build the mesh')
 
+    ! What follows is just a hack, as I'm trying to minimise changes outside this file
+    ! There are some differences in a concept, so not everything can be filled in properly
+
+    ! Initialise mesh type
+    call mesh_free(msh)
+    ! general mesh info
+    msh%gdim = p4%dim ! grid dimension
+    ! general element info
+    msh%nelv = p4%elem%nelv ! local number of elements
+    msh%glb_nelv = p4%elem%nelgt ! global number of elelments
+    msh%offset_el = p4%elem%nelgto ! global element offset; NOT NEEDED IN THIS VERSION
+    msh%npts = 2**p4%dim ! number of element vertices
+
+    ! Point definition differs so I include here independent points only
+    msh%mpts = p4%elem%vert%lnum ! local number of unique vertices (independent nodes only)
+    msh%mfcs = p4%elem%face%lnum ! local number of unique faces
+    msh%meds = p4%elem%edge%lnum ! local number of unique edges
+
+    msh%glb_mpts = p4%elem%vert%gnum ! global number of unique vertices
+    msh%glb_mfcs = p4%elem%face%gnum ! global number of unique faces
+    msh%glb_meds = p4%elem%edge%gnum ! global number of unique edges
+
+    ! this dosen't seem to be used in original version and I do not need it for p4est either
+    !msh%max_pts_id =
 
     ! If there are any elements
     if (p4%elem%nelv > 0) then
-       ! add all the local points
+
+       ! Fill in point/node information
+       call p4_nodes_fill(msh, p4)
+
+       ! Fill in element information
+       call p4_element_fill(msh, p4)
+
+       ! msh%htp - not used as hanging node global id can be identified for a given element only
+       ! msh%htf - not used as faces global id is already provided by p4
+       ! msh%hte - not used as edge global id is already provided by p4
+
+       ! Fill in neighbour information
+       call p4_neighbour_fill(msh, p4)
+
+       ! Fill in distdata information
+       call p4_distdata_fill(msh, p4)
+
+       ! Fill in boundary condition information
+       call p4_bc_fill(msh, p4)
+
+
+       ! curved edges
+       !! @todo curves for p4est
+       call msh%curve%init(msh%nelv)
+       ! P4EST DOES NOT PROVIDE CURVATURE DATA DIRECTLY, SO LET'S LEAVE IT FOR NOW
+       ! this data should be loaded from another file??
+       !call mesh_mark_curve_element(msh, el_idx, curve_data, type)
+
+
+       ! mesh finalisation
+       call mesh_generate_flags(msh) ! deformation flag; THIS IS NOT 100% CORRECT
+
+       call msh%wall%finalize() ! BC finalisation
+       call msh%inlet%finalize()
+       call msh%outlet%finalize()
+       call msh%outlet_normal%finalize()
+       call msh%sympln%finalize()
+       call msh%periodic%finalize()
+       do il = 1, NEKO_MSH_MAX_ZLBLS
+          call msh%labeled_zones(il)%finalize()
+       end do
+       call msh%curve%finalize() ! curved sides finalisation
     end if
+
+    msh%lconn = .true.
+    msh%lnumr = .true.
+
+
+    testing : block
+      integer :: il, jl, ierr
+      integer(i4) :: neighn
+      integer(i4), pointer, dimension(:) :: neighl
+      call MPI_Barrier(NEKO_COMM, ierr)
+!      do il = 1, msh%mpts
+!         neighn = msh%point_neigh(il)%size()
+!         neighl => msh%point_neigh(il)%array()
+!         do jl = 1, neighn
+!            write(*,*) 'TEST vneigh',pe_rank,il,p4%elem%vert%lgidx(il),neighn,jl,neighl(jl)
+!         end do
+!      end do
+!      do il = 1, msh%nelv
+!         do jl = 1, NEKO_HEX_NFCS
+!            write(*,*) 'TEST fneigh', pe_rank, il, jl, p4%elem%gidx(il), &
+!                 & msh%facet_neigh(jl,il), &
+!                 &  p4%elem%face%lmap(jl,il)
+!         end do
+!         if (msh%dfrmd_el(il)) then
+!            u = msh%elements(il)%e%pts(2)%p%x - msh%elements(il)%e%pts(1)%p%x
+!            
+!            write(*,*)'TEST deform', pe_rank, il, &
+!                 & msh%elements(il)%e%pts(1)%p%x,msh%elements(il)%e%pts(2)%p%x
+!         end if
+!            do jl = 1, msh%npts
+!               write(*,*) 'TEST vertex', pe_rank, il, jl,msh%elements(il)%e%pts(jl)%p%x, &
+!                    & msh%elements(il)%e%pts(jl)%p%id(), nin, npe, nhf, nhe, &
+!                    & msh%dfrmd_el(il)
+            
+!            write(*,*) 'TEST vertex', pe_rank, il, jl, msh%elements(il)%e%id(), &
+!                 & msh%elements(il)%e%pts(jl)%p%id()
+!            end do
+!         end if
+!      end do
+      !write(*,*) 'TEST ',pe_rank,p4%dim,p4%nelgt,p4%nelgto,&
+      !     &p4%nelt,p4%nelv,p4%maxl,p4%maxg
+      call MPI_Barrier(NEKO_COMM, ierr)
+    end block testing
+
+    call neko_log%end_section()
 
     return
   end subroutine p4_msh_get
@@ -826,7 +936,7 @@ contains
     !local variables
     integer :: il, jl, kl, itmp
     integer :: nvper
-    integer nin, nhf, nhe, nvt
+    integer :: nin, nhf, nhe, nvt
     logical :: ifvequal
     type(point_t) :: ptsv, ptsn
     type(tuple_i4_t) :: idx, tmp
@@ -873,7 +983,7 @@ contains
                    if (htpts%get(ptsv, tmp) > 0) then
                       ! new node
                       nvper = nvper + 1
-                      idx = [nvper, nvt]
+                      idx = (/ nvper, nvt /)
                       call htpts%set(ptsv, idx)
                       call ptsv%set_id(nvper)
                       pvmap(jl, il) = nvper ! vertex to periodic node mapping
@@ -909,7 +1019,7 @@ contains
              if (p4%elem%vnmap(jl, il) > nin) &
                   & p4%elem%vnmap(jl, il) = p4%elem%vnmap(jl, il) + nvper
           else
-             p4%elem%vnmap(jl, il) = pvmap(jl, il)
+             p4%elem%vnmap(jl, il) = nin + pvmap(jl, il)
           end if
        end do
     end do
@@ -1223,6 +1333,650 @@ contains
     return
   end subroutine p4_family_get
 
+  ! Fill the mesh type with node information from p4_mesh_import type
+  subroutine p4_nodes_fill(msh, p4)
+    ! argument list
+    type(mesh_t), intent(inout) :: msh
+    type(p4_mesh_import_t), intent(in) :: p4
+    !local variables
+    integer(i4) :: il
+    integer(i4) :: itmp
+    integer(i4) :: nin, npe, nhf, nhe
+
+    ! Fill in with all unique local (not global) points.
+    ! The point id is set to a local id, as at this stage the mapping to the global id is not unique
+    ! get shifts in vertex mapping array
+    nin = p4%indn%lnum
+    npe = p4%pern%lnum
+    nhf = p4%fchn%lnum
+    nhe = p4%edhn%lnum
+    allocate(msh%points(nin+npe+nhf+nhe))
+    ! independent nodes; the only ones with direct global mapping
+    do il = 1, nin
+       msh%points(il) = point_t(p4%indn%coord(:, il), il)
+    end do
+    ! periodic nodes; global id through mapping to independent nodes (independent on element position)
+    do il = 1, npe
+       itmp = nin + il ! this because point constructor has id with intent(inout) attribute
+       msh%points(itmp) = point_t(p4%pern%coord(:, il), itmp)
+    end do
+    npe = npe + nin
+    ! face hanging node; global mapping depend on the element position
+    do il = 1, nhf
+       itmp = npe + il
+       msh%points(itmp) = point_t(p4%fchn%coord(:, il), itmp)
+    end do
+    nhf = nhf + npe
+    if (msh%gdim == 3) then
+       ! edge hanging node; global mapping depend on the element position
+       do il = 1, nhe
+          itmp = nhf + il 
+          msh%points(itmp) = point_t(p4%edhn%coord(:, il), itmp)
+       end do
+    end if
+
+    return
+  end subroutine p4_nodes_fill
+
+  ! Fill the mesh type with element information from p4_mesh_import type
+  subroutine p4_element_fill(msh, p4)
+    ! argument list
+    type(mesh_t), intent(inout) :: msh
+    type(p4_mesh_import_t), intent(in) :: p4
+    !local variables
+    integer(i4) :: il
+    integer(i4) :: itmp
+    class(element_t), pointer :: ep
+
+    ! Fill in element array
+    ! Mapping of the vertex to local node is sufficient to get unique global,
+    ! so I could set point id to the global one here, but entity id is just int4
+    ! and hex/quad uses pointers
+    allocate(msh%elements(msh%nelv))
+    if (msh%gdim == 3) then
+       do il = 1, msh%nelv
+          allocate(hex_t::msh%elements(il)%e)
+          ! get global element id; NOTE there is type casting from int8
+          itmp = int(p4%elem%gidx(il),i4)
+          ! set hex in the array using vertex to node mapping
+          ! NOTICE VERTEX CONVERSION HERE; IT IS HARDCODED, AS IT IS DONE ONLY ONCE
+          ! AND I ASSUME IT WILL BE REMOVED IN THE FUTURE
+          !! @todo symmetric vertex numberring
+          select type(ep => msh%elements(il)%e)
+          type is (hex_t)
+             call ep%init(itmp, &
+                  & msh%points(p4%elem%vnmap(1, il)), &
+                  & msh%points(p4%elem%vnmap(2, il)), &
+                  & msh%points(p4%elem%vnmap(4, il)), & ! swapped
+                  & msh%points(p4%elem%vnmap(3, il)), & ! swapped
+                  & msh%points(p4%elem%vnmap(5, il)), &
+                  & msh%points(p4%elem%vnmap(6, il)), &
+                  & msh%points(p4%elem%vnmap(8, il)), & ! swapped
+                  & msh%points(p4%elem%vnmap(7, il))) ! swapped
+          class default
+             call neko_error('Invalid element type')
+          end select
+       end do
+    else if (msh%gdim == 2) then
+       call neko_error("2D not supported for p4est yet")
+    else
+       call neko_error("Invalid dimension")
+    end if
+
+    ! deformed element flag; It is set in mesh_generate_flags (dependent on vertex ordering)
+    allocate(msh%dfrmd_el(msh%nelv))
+
+    return
+  end subroutine p4_element_fill
+
+  ! Fill the mesh type with neighbour information from p4_mesh_import type
+  subroutine p4_neighbour_fill(msh, p4)
+    ! argument list
+    type(mesh_t), intent(inout) :: msh
+    type(p4_mesh_import_t), intent(in) :: p4
+    !local variables
+    
+
+    ! get vertex neighbours; most probably not needed
+    call p4_vertex_neighbour_fill(msh, p4)
+
+    ! get face neighbours; is it reall y needed?
+    call p4_face_neighbour_fill(msh, p4)
+
+    !! @todo neighbour list for edges
+    ! THIS IS SIMLAR TO VERTEX (I SHOULD COMBINE THE ROUTINES TO MAKE IT GENERAL)
+    ! BUT IS NOT USED NOW, AS EDGE INFO IS NOT EXPORTED RIGHT NOW
+    call p4_edge_neighbour_fill(msh, p4)
+
+    return
+  end subroutine p4_neighbour_fill
+
+  ! Fill the mesh type with vertex neighbour information
+  subroutine p4_vertex_neighbour_fill(msh, p4)
+    ! argument list
+    type(mesh_t), intent(inout) :: msh
+    type(p4_mesh_import_t), intent(in) :: p4
+    !local variables
+    integer(i4) :: il, jl, kl, ll, ml
+    integer(i4) :: itmp, ierr
+    integer(i4), allocatable, dimension(:) :: cmoff ! offest in send/receive buffers
+    integer(i4) :: neighn
+    integer(i4), pointer, dimension(:) :: neighl
+    integer(i4), allocatable, dimension(:) :: rbuf, sbuf ! send/receive buffers
+    type(MPI_Request), allocatable, dimension(:) :: request ! MPI request
+    type(MPI_Status), allocatable, dimension(:) :: status ! MPI status
+
+    ! Get list of vertex neighbours (elements a given vertex belongs to)
+    ! local vertex neighbours
+    allocate(msh%point_neigh(msh%mpts))
+    do il = 1, msh%mpts
+       call msh%point_neigh(il)%init()
+    end do
+    do il = 1, msh%nelv
+       ! get global element id; NOTE there is type casting from int8
+       itmp = int(p4%elem%gidx(il), i4)
+       do jl = 1, msh%npts
+          call msh%point_neigh(p4%elem%vert%lmap(jl, il))%push(itmp)
+       end do
+    end do
+
+    ! nonlocal node neighbours
+    ! count size of send/receive buffers
+    allocate(cmoff(p4%elem%vert%nrank), request(p4%elem%vert%nrank-1), &
+         & status(p4%elem%vert%nrank-1))
+    itmp = 1
+    cmoff(itmp) = 1
+    do il= 1, p4%elem%vert%nrank ! mpi rank loop
+       if (p4%elem%vert%lrank(il) /= pe_rank) then
+          itmp = itmp + 1 ! mpi rank loop
+          cmoff(itmp) = cmoff(itmp - 1)
+          do jl = p4%elem%vert%loff(il), p4%elem%vert%loff(il+1) -1
+             ! sum number of local vertex neighbours for a given rank
+             neighn = msh%point_neigh(p4%elem%vert%lshare(jl))%size()
+             cmoff(itmp) = cmoff(itmp) + 2 + neighn
+          end do
+       end if
+    end do
+    allocate(rbuf(cmoff(p4%elem%vert%nrank)), sbuf(cmoff(p4%elem%vert%nrank)))
+    ! set non-blocking receive
+    itmp = 0
+    do il=1, p4%elem%vert%nrank ! mpi rank loop
+       if (p4%elem%vert%lrank(il) /= pe_rank) then
+          itmp = itmp + 1 ! count messages
+          jl = cmoff(itmp+1) - cmoff(itmp)
+          call MPI_IRecv(rbuf(cmoff(itmp):cmoff(itmp+1)-1), jl, MPI_INTEGER, &
+               & p4%elem%vert%lrank(il), jl, NEKO_COMM, request(itmp), ierr)
+       end if
+    end do
+
+    ! redistribute vertex information
+    itmp = 0
+    do il = 1, p4%elem%vert%nrank ! mpi rank loop
+       if (p4%elem%vert%lrank(il) /= pe_rank) then
+          itmp = itmp + 1 ! count messages
+          ll = cmoff(itmp)
+          do jl = p4%elem%vert%loff(il), p4%elem%vert%loff(il+1) - 1
+             sbuf(ll) = p4%elem%vert%lgidx(p4%elem%vert%lshare(jl)) ! vertex global id
+             ll = ll + 1
+             ! extract local neighbours
+             neighn = msh%point_neigh(p4%elem%vert%lshare(jl))%size()
+             neighl => msh%point_neigh(p4%elem%vert%lshare(jl))%array()
+             sbuf(ll) = neighn ! local number of neighbours
+             ll = ll + 1
+             do kl = 1, neighn
+                sbuf(ll) = neighl(kl)
+                ll = ll + 1
+             end do
+          end do
+          ! sanity check
+          if (ll /= cmoff(itmp + 1)) &
+               & call neko_error('Inconsistent number of local vertex neighbours; receive.')
+          jl = cmoff(itmp+1) - cmoff(itmp)
+          call MPI_Send(sbuf(cmoff(itmp):cmoff(itmp+1)-1), jl, MPI_INTEGER, &
+               & p4%elem%vert%lrank(il), jl, NEKO_COMM, ierr)
+       end if
+    end do
+
+    ! finalize communication
+    call MPI_Waitall(p4%elem%vert%nrank - 1, request, status, ierr)
+
+    ! extract data
+    itmp = 0
+    do il = 1, p4%elem%vert%nrank ! mpi rank loop
+       if (p4%elem%vert%lrank(il) /= pe_rank) then
+          itmp = itmp + 1 ! count messages
+          ll = cmoff(itmp)
+          do jl = p4%elem%vert%loff(il), p4%elem%vert%loff(il+1) - 1
+             ! check vertex global id
+             if (p4%elem%vert%lgidx(p4%elem%vert%lshare(jl)) /= rbuf(ll)) &
+                  & call neko_error('Inconsistent global vertex number in neighbour exchange.')
+             ll = ll + 1
+             neighn = rbuf(ll)
+             ll = ll + 1
+             do kl = 1, neighn
+                ml = -rbuf(ll)
+                call msh%point_neigh(p4%elem%vert%lshare(jl))%push(ml)
+                ll = ll + 1
+             end do
+          end do
+          ! sanity check
+          if (ll /= cmoff(itmp + 1)) &
+               & call neko_error('Inconsistent number of local vertex neighbours; extract.')
+       end if
+    end do
+
+    deallocate(cmoff, request, status, rbuf, sbuf)
+    return
+  end subroutine p4_vertex_neighbour_fill
+
+  ! Fill the mesh type with face neighbour information
+  subroutine p4_face_neighbour_fill(msh, p4)
+    ! argument list
+    type(mesh_t), intent(inout) :: msh
+    type(p4_mesh_import_t), intent(in) :: p4
+    !local variables
+    integer(i4) :: il, jl
+    integer(i4) :: itmp, ierr
+    type(stack_i4t2_t), allocatable :: tmp_neigh(:) ! to get face neighbours
+    type(tuple_i4_t) :: ttmp
+    integer(i4) :: neighn
+    type(tuple_i4_t), pointer, dimension(:) :: neighl
+    integer(i4), allocatable, dimension(:,:) :: rbuf, sbuf ! send/receive buffers
+    type(MPI_Request), allocatable, dimension(:) :: request ! MPI request
+    type(MPI_Status), allocatable, dimension(:) :: status ! MPI status
+
+    ! Get list of face neighbours
+    ! local face neighbours
+    if (msh%gdim == 3) then
+       ! gether data
+       allocate(tmp_neigh(msh%mfcs))
+       do il = 1, msh%mfcs
+          call tmp_neigh(il)%init()
+       end do
+       do il = 1, msh%nelv
+          do jl = 1, NEKO_HEX_NFCS
+             ! I work with local element number
+             ttmp%x = (/ jl, il /)
+             call tmp_neigh(p4%elem%face%lmap(jl, il))%push(ttmp)
+          end do
+       end do
+       ! fill in type array
+       allocate(msh%facet_neigh(NEKO_HEX_NFCS, msh%nelv)) ! face neigbour
+       do il = 1, msh%mfcs
+          neighn = tmp_neigh(il)%size()
+          neighl => tmp_neigh(il)%array()
+          select case(neighn)
+          case(1)
+             ! no local neighbour
+             msh%facet_neigh(neighl(1)%x(1), neighl(1)%x(2)) = 0
+             ! check if face mapping is correct
+             if (p4%elem%face%lmap(neighl(1)%x(1), neighl(1)%x(2)) /= il) &
+                  & call neko_error('Inconsistent local face number and neighbour list.')
+          case(2)
+             ! swap global element numbers
+             msh%facet_neigh(neighl(1)%x(1), neighl(1)%x(2)) = &
+                  & int(p4%elem%gidx(neighl(2)%x(2)), i4)
+             msh%facet_neigh(neighl(2)%x(1), neighl(2)%x(2)) = &
+                  & int(p4%elem%gidx(neighl(1)%x(2)), i4)
+             if ((p4%elem%face%lmap(neighl(1)%x(1), neighl(1)%x(2)) /= il).or. &
+                  & (p4%elem%face%lmap(neighl(2)%x(1), neighl(2)%x(2)) /= il)) &
+                  & call neko_error('Inconsistent local face number and neighbour list.')
+          case default
+             ! none or too many neighbours
+             call neko_error('Invalid number of local face neighbours.')
+          end select
+       end do
+
+       ! non-local face neighbours
+       ! start communication
+       allocate(rbuf(2, p4%elem%face%nshare), sbuf(2, p4%elem%face%nshare), &
+            & request(p4%elem%face%nrank), status(p4%elem%face%nrank))
+       ! set non-blocking receive
+       itmp = 0
+       do il = 1, p4%elem%face%nrank ! mpi rank loop
+          if (p4%elem%face%lrank(il) /= pe_rank) then
+             itmp = itmp + 1 ! count messages
+             jl = 2*(p4%elem%face%loff(il+1) - p4%elem%face%loff(il))
+             call MPI_IRecv(rbuf(:, p4%elem%face%loff(il):p4%elem%face%loff(il+1)-1), &
+                  & jl, MPI_INTEGER, p4%elem%face%lrank(il), jl, NEKO_COMM, request(itmp), ierr)
+          end if
+       end do
+
+       ! redistribute edge information
+       do il = 1, p4%elem%face%nrank ! mpi rank loop
+          if (p4%elem%face%lrank(il) /= pe_rank) then
+             do jl = p4%elem%face%loff(il), p4%elem%face%loff(il+1) -1
+                ! has the face local local neighbour
+                neighn = tmp_neigh(p4%elem%face%lshare(jl))%size()
+                neighl => tmp_neigh(p4%elem%face%lshare(jl))%array()
+                select case(neighn)
+                case(1)
+                   ! no local neighbour
+                   sbuf(1,jl) = p4%elem%face%lgidx(p4%elem%face%lshare(jl)) ! face global number
+                   sbuf(2,jl) = int(p4%elem%gidx(neighl(1)%x(2)), i4) !element global number
+                case(2)
+                   call neko_error('Face with a local neighbour cannot have nonlocal one.')
+                case default
+                   ! none or too many neighbours
+                   call neko_error('Invalid number of local face neighbours.')
+                end select
+             end do
+             jl = 2*(p4%elem%face%loff(il+1) - p4%elem%face%loff(il))
+             call MPI_Send(sbuf(:, p4%elem%face%loff(il):p4%elem%face%loff(il+1)-1), &
+                  & jl, MPI_INTEGER, p4%elem%face%lrank(il), jl, NEKO_COMM, ierr)
+          end if
+       end do
+
+       ! finalize communication
+       call MPI_Waitall(p4%elem%face%nrank - 1, request, status, ierr)
+
+       ! extract data
+       do il = 1, p4%elem%face%nrank ! mpi rank loop
+          if (p4%elem%face%lrank(il) /= pe_rank) then
+             do jl = p4%elem%face%loff(il), p4%elem%face%loff(il+1) -1
+                ! does the face global id match
+                if (p4%elem%face%lgidx(p4%elem%face%lshare(jl)) /= rbuf(1,jl)) &
+                        & call neko_error('Global face number does not match.')
+                ! has the face local local neighbour
+                neighn = tmp_neigh(p4%elem%face%lshare(jl))%size()
+                neighl => tmp_neigh(p4%elem%face%lshare(jl))%array()
+                select case(neighn)
+                case(1)
+                   ! no local neighbour
+                   ! none of the faces can have more than one nonlocal neighbour
+                   if (msh%facet_neigh(neighl(1)%x(1),neighl(1)%x(2)) /= 0) &
+                        & call neko_error('Nonlocal face neighbour already set.')
+                   msh%facet_neigh(neighl(1)%x(1),neighl(1)%x(2)) = - rbuf(2,jl)
+                case(2)
+                   call neko_error('Face with a local neighbour cannot have nonlocal one.')
+                case default
+                   ! none or too many neighbours
+                   call neko_error('Invalid number of local face neighbours.')
+                end select
+             end do
+          end if
+       end do
+
+       ! free memory
+       do il = 1, msh%mfcs
+          call tmp_neigh(il)%free()
+       end do
+       deallocate(tmp_neigh)
+       deallocate(rbuf, sbuf, request, status)
+    else if (msh%gdim == 2) then
+       call neko_error("2D not supported for p4est yet")
+    else
+       call neko_error("Invalid dimension")
+    end if
+
+    return
+  end subroutine p4_face_neighbour_fill
+
+  ! Fill the mesh type with edge neighbour information
+  subroutine p4_edge_neighbour_fill(msh, p4)
+    ! argument list
+    type(mesh_t), intent(inout) :: msh
+    type(p4_mesh_import_t), intent(in) :: p4
+    !local variables
+    integer(i4) :: il, jl, kl, ll, ml
+    integer(i4) :: itmp, ierr
+    type(stack_i4_t), allocatable :: edge_neigh(:) ! edge neighbours; not present in mesh type
+    integer(i4), allocatable, dimension(:) :: cmoff ! offest in send/receive buffers
+    integer(i4) :: neighn
+    integer(i4), pointer, dimension(:) :: neighl
+    integer(i4), allocatable, dimension(:) :: rbuf, sbuf ! send/receive buffers
+    type(MPI_Request), allocatable, dimension(:) :: request ! MPI request
+    type(MPI_Status), allocatable, dimension(:) :: status ! MPI status
+
+    if (msh%gdim == 3) then
+       ! gether data
+       allocate(edge_neigh(msh%meds))
+       do il = 1, msh%meds
+          call edge_neigh(il)%init()
+       end do
+       do il = 1, msh%nelv
+          ! get global element id; NOTE there is type casting from int8
+          itmp = int(p4%elem%gidx(il), i4)
+          do jl = 1, NEKO_HEX_NEDS
+             call edge_neigh(p4%elem%edge%lmap(jl, il))%push(itmp)
+          end do
+       end do
+
+       ! nonlocal edge neighbours
+       ! count size of send/receive buffers
+       allocate(cmoff(p4%elem%edge%nrank), request(p4%elem%edge%nrank-1), &
+            & status(p4%elem%edge%nrank-1))
+       itmp = 1
+       cmoff(itmp) = 1
+       do il= 1, p4%elem%edge%nrank ! mpi rank loop
+          if (p4%elem%edge%lrank(il) /= pe_rank) then
+             itmp = itmp + 1 ! mpi rank loop
+             cmoff(itmp) = cmoff(itmp - 1)
+             do jl = p4%elem%edge%loff(il), p4%elem%edge%loff(il+1) -1
+             ! sum number of local edge neighbours for a given rank
+             neighn = edge_neigh(p4%elem%edge%lshare(jl))%size()
+             cmoff(itmp) = cmoff(itmp) + 2 + neighn
+          end do
+       end if
+    end do
+    allocate(rbuf(cmoff(p4%elem%edge%nrank)), sbuf(cmoff(p4%elem%edge%nrank)))
+    ! set non-blocking receive
+    itmp = 0
+    do il=1, p4%elem%edge%nrank ! mpi rank loop
+       if (p4%elem%edge%lrank(il) /= pe_rank) then
+          itmp = itmp + 1 ! count messages
+          jl = cmoff(itmp+1) - cmoff(itmp)
+          call MPI_IRecv(rbuf(cmoff(itmp):cmoff(itmp+1)-1), jl, MPI_INTEGER, &
+               & p4%elem%edge%lrank(il), jl, NEKO_COMM, request(itmp), ierr)
+       end if
+    end do
+
+    ! redistribute edge information
+    itmp = 0
+    do il = 1, p4%elem%edge%nrank ! mpi rank loop
+       if (p4%elem%edge%lrank(il) /= pe_rank) then
+          itmp = itmp + 1 ! count messages
+          ll = cmoff(itmp)
+          do jl = p4%elem%edge%loff(il), p4%elem%edge%loff(il+1) - 1
+             sbuf(ll) = p4%elem%edge%lgidx(p4%elem%edge%lshare(jl)) ! edge global id
+             ll = ll + 1
+             ! extract local neighbours
+             neighn = edge_neigh(p4%elem%edge%lshare(jl))%size()
+             neighl => edge_neigh(p4%elem%edge%lshare(jl))%array()
+             sbuf(ll) = neighn ! local number of neighbours
+             ll = ll + 1
+             do kl = 1, neighn
+                sbuf(ll) = neighl(kl)
+                ll = ll + 1
+             end do
+          end do
+          ! sanity check
+          if (ll /= cmoff(itmp + 1)) &
+               & call neko_error('Inconsistent number of local dege neighbours; receive.')
+          jl = cmoff(itmp+1) - cmoff(itmp)
+          call MPI_Send(sbuf(cmoff(itmp):cmoff(itmp+1)-1), jl, MPI_INTEGER, &
+               & p4%elem%edge%lrank(il), jl, NEKO_COMM, ierr)
+       end if
+    end do
+
+    ! finalize communication
+    call MPI_Waitall(p4%elem%edge%nrank - 1, request, status, ierr)
+
+    ! extract data
+    itmp = 0
+    do il = 1, p4%elem%edge%nrank ! mpi rank loop
+       if (p4%elem%edge%lrank(il) /= pe_rank) then
+          itmp = itmp + 1 ! count messages
+          ll = cmoff(itmp)
+          do jl = p4%elem%edge%loff(il), p4%elem%edge%loff(il+1) - 1
+             ! check edge global id
+             if (p4%elem%edge%lgidx(p4%elem%edge%lshare(jl)) /= rbuf(ll)) &
+                  & call neko_error('Inconsistent global edge number in neighbour exchange.')
+             ll = ll + 1
+             neighn = rbuf(ll)
+             ll = ll + 1
+             do kl = 1, neighn
+                ml = -rbuf(ll)
+                call edge_neigh(p4%elem%edge%lshare(jl))%push(ml)
+                ll = ll + 1
+             end do
+          end do
+          ! sanity check
+          if (ll /= cmoff(itmp + 1)) &
+               & call neko_error('Inconsistent number of local edge neighbours; extract.')
+       end if
+    end do
+
+    deallocate(cmoff, request, status, rbuf, sbuf)
+    else
+       call neko_error("Invalid dimension")
+    end if
+
+    return
+  end subroutine p4_edge_neighbour_fill
+
+  ! Fill the mesh type with distdata information from p4_mesh_import type
+  subroutine p4_distdata_fill(msh, p4)
+    ! argument list
+    type(mesh_t), intent(inout) :: msh
+    type(p4_mesh_import_t), intent(in) :: p4
+    !local variables
+    integer(i4) :: il, jl, kl
+    integer(i4) :: itmp
+
+    ! Set connectivity information
+    call distdata_init(msh%ddata)
+    ! Add shared points; local id
+    do il = 1, p4%elem%vert%nrank
+       if (p4%elem%vert%lrank(il) == pe_rank) then
+          do jl = p4%elem%vert%loff(il), p4%elem%vert%loff(il+1) - 1
+             call distdata_set_shared_point(msh%ddata, p4%elem%vert%lshare(jl))
+          end do
+          exit
+       end if
+    end do
+    ! THERE WOULD BE GOOD TO ADD LOCAL TO GOBAL VERTEX NUMBERRING AS WELL
+    
+    ! Add shared faces; local id
+    do il = 1, p4%elem%face%nrank
+       if (p4%elem%face%lrank(il) == pe_rank) then
+          itmp = il
+          do jl = p4%elem%face%loff(il), p4%elem%face%loff(il+1) - 1
+             call distdata_set_shared_facet(msh%ddata, p4%elem%face%lshare(jl))
+          end do
+          exit
+       end if
+    end do
+    ! Get faces that are shared; this is very simple and silly way of doing, but for now it is enough
+    do il = p4%elem%face%loff(il), p4%elem%face%loff(il+1) - 1
+       elemf : do jl = 1, msh%nelv
+          do kl = 1, NEKO_HEX_NFCS
+             if (p4%elem%face%lmap(kl, jl) == p4%elem%face%lshare(il)) then
+                call distdata_set_shared_el_facet(msh%ddata, jl, kl)
+                ! check consistency of facet_neigh
+                if (msh%facet_neigh(kl, jl) >= 0) &
+                     & call neko_error('Inconsistent facet_neigh and face shared list.')
+                exit elemf
+             end if
+          end do
+       end do elemf
+    end do
+    ! local to global id mapping
+    allocate(msh%ddata%local_to_global_facet(msh%mfcs))
+    do il = 1, msh%mfcs
+       ! global face id; notice type casting
+       itmp = int(p4%elem%face%lgidx(il),i4)
+       call distdata_set_local_to_global_facet(msh%ddata, il, itmp)
+    end do
+
+    ! Add shared edges; local id
+    if (msh%gdim == 3) then
+       do il = 1, p4%elem%edge%nrank
+          if (p4%elem%edge%lrank(il) == pe_rank) then
+             do jl = p4%elem%edge%loff(il), p4%elem%edge%loff(il+1) - 1
+                call distdata_set_shared_facet(msh%ddata, p4%elem%edge%lshare(jl))
+             end do
+             exit
+          end if
+       end do
+       ! local to global id mapping
+       allocate(msh%ddata%local_to_global_edge(msh%meds))
+       do il = 1, msh%meds
+          ! global edge id; notice type casting
+          itmp = int(p4%elem%edge%lgidx(il),i4)
+          call distdata_set_local_to_global_edge(msh%ddata, il, itmp)
+       end do
+    end if
+
+    mesh%ldist = .true.
+
+    return
+  end subroutine p4_distdata_fill
+
+  ! Fill the mesh type with boundarry condition information from p4_mesh_import type
+  subroutine p4_bc_fill(msh, p4)
+    ! argument list
+    type(mesh_t), intent(inout) :: msh
+    type(p4_mesh_import_t), intent(in) :: p4
+    !local variables
+    integer(i4) :: il, jl, ie, if
+    integer(i4) :: itmp
+    integer(i4) :: p_f, p_e ! dummy variables for setting periodic bc
+    integer(i4), dimension(4) :: pt_id ! dummy variable for setting periodic bc
+
+    ! Initialize element boundary condition
+    allocate(msh%facet_type(2 * msh%gdim, msh%nelv))
+    msh%facet_type = 0
+    call msh%wall%init(msh%nelv)
+    call msh%inlet%init(msh%nelv)
+    call msh%outlet%init(msh%nelv)
+    call msh%outlet_normal%init(msh%nelv)
+    call msh%sympln%init(msh%nelv)
+    call msh%periodic%init(msh%nelv)
+
+    allocate(msh%labeled_zones(NEKO_MSH_MAX_ZLBLS))
+    do il = 1, NEKO_MSH_MAX_ZLBLS
+       call msh%labeled_zones(il)%init(msh%nelv)
+    end do
+
+    !! @todo periodic bc for p4est
+    ! There is inconsistency here, as I treat bc differently than neko.
+    ! PLACE FOR DISCUSSION; I HAVE TO CHECK WHAT GMSH DOES WITH BC
+    ! ALL THIS HAVE TO BE CHECKED IN THE FUTURE
+    do il = 1, msh%nelv
+       ie = il ! once again problem with inout attributre
+       do jl = 1, NEKO_HEX_NFCS
+          if = jl ! once again problem with inout attributre
+          select case(p4%elem%bc(jl,il))
+          case(-1) ! this is my periodic bc mark, which is inconsistent with neko (5)
+             ! I don't think I have to do here much more than just mark a face,
+             ! as periodicity is already taken into account in communicator
+             ! IT WOULD BE SUFFICIENT TO HAVE THIS ZONE TO BE LIKE ANY OTHER ONE
+             call mesh_mark_periodic_facet(msh, if, ie, p_f, p_e, pt_id)
+             ! There is no need to call mesh apply, as I do not stick to
+             ! node numberring anyhow.
+          case(1)
+             call mesh_mark_wall_facet(msh, if, ie)
+          case(2)
+             call mesh_mark_inlet_facet(msh, if, ie)
+          case(3)
+             call mesh_mark_outlet_facet(msh, if, ie)
+          case(4)
+             call mesh_mark_sympln_facet(msh, if, ie)
+          case(5)
+             ! neko periodic set in case -1
+          case(6)
+             call mesh_mark_outlet_normal_facet(msh, if, ie)
+          case(7)
+             ! itmp is a label, but I have no such data on p4est side right now
+             itmp = 2 ! this is just a hack !!!!!!!!!!!!!!!!!!!!!!!!!
+             call mesh_mark_labeled_facet(msh, if, ie, itmp)
+          end select
+       end do
+    end do
+
+    return
+  end subroutine p4_bc_fill
 #else
   
   subroutine p4_init(mesh_file, log_threshold)
