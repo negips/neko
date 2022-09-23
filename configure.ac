@@ -215,6 +215,12 @@ else
    AC_SUBST(device_mpi, .false.)
 fi
 
+# Checks for NCCL backend
+AX_NCCL
+
+# Checks for RCCL backend
+AX_RCCL
+
 AM_CONDITIONAL([ENABLE_PARMETIS], [test "x$found_domain_decomp" = xyes])
 AM_CONDITIONAL([ENABLE_ADIOS2], [test "x${have_adios2}" = xyes])
 AM_CONDITIONAL([ENABLE_P4EST], [test "x${found_p4est}" = xyes])
