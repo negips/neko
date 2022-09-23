@@ -1868,7 +1868,7 @@ contains
        end do
     end if
 
-    mesh%ldist = .true.
+    msh%ldist = .true.
 
     return
   end subroutine p4_distdata_fill
