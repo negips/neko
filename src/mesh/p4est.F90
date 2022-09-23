@@ -627,46 +627,6 @@ contains
     msh%lconn = .true.
     msh%lnumr = .true.
 
-
-    testing : block
-      integer :: il, jl, ierr
-      integer(i4) :: neighn
-      integer(i4), pointer, dimension(:) :: neighl
-      call MPI_Barrier(NEKO_COMM, ierr)
-!      do il = 1, msh%mpts
-!         neighn = msh%point_neigh(il)%size()
-!         neighl => msh%point_neigh(il)%array()
-!         do jl = 1, neighn
-!            write(*,*) 'TEST vneigh',pe_rank,il,p4%elem%vert%lgidx(il),neighn,jl,neighl(jl)
-!         end do
-!      end do
-!      do il = 1, msh%nelv
-!         do jl = 1, NEKO_HEX_NFCS
-!            write(*,*) 'TEST fneigh', pe_rank, il, jl, p4%elem%gidx(il), &
-!                 & msh%facet_neigh(jl,il), &
-!                 &  p4%elem%face%lmap(jl,il)
-!         end do
-!         if (msh%dfrmd_el(il)) then
-!            u = msh%elements(il)%e%pts(2)%p%x - msh%elements(il)%e%pts(1)%p%x
-!            
-!            write(*,*)'TEST deform', pe_rank, il, &
-!                 & msh%elements(il)%e%pts(1)%p%x,msh%elements(il)%e%pts(2)%p%x
-!         end if
-!            do jl = 1, msh%npts
-!               write(*,*) 'TEST vertex', pe_rank, il, jl,msh%elements(il)%e%pts(jl)%p%x, &
-!                    & msh%elements(il)%e%pts(jl)%p%id(), nin, npe, nhf, nhe, &
-!                    & msh%dfrmd_el(il)
-            
-!            write(*,*) 'TEST vertex', pe_rank, il, jl, msh%elements(il)%e%id(), &
-!                 & msh%elements(il)%e%pts(jl)%p%id()
-!            end do
-!         end if
-!      end do
-      !write(*,*) 'TEST ',pe_rank,p4%dim,p4%nelgt,p4%nelgto,&
-      !     &p4%nelt,p4%nelv,p4%maxl,p4%maxg
-      call MPI_Barrier(NEKO_COMM, ierr)
-    end block testing
-
     call neko_log%end_section()
 
     return
