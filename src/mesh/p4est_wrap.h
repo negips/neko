@@ -21,6 +21,13 @@
 #error "p4est_wrap.h requires p4est.h or p8est.h"
 #endif
 
+/* Numbers designating the type and action for refinement  */
+#define AMR_RM_NONE       0     /* No refinement action */
+#define AMR_RM_H_REF      1     /* Refine by splitting element */
+#define AMR_RM_H_CRS     -1     /* Coarsen by merging element */
+#define AMR_RM_P_REF      2     /* Refine by rising polynomial order in element */
+#define AMR_RM_P_CRS     -2     /* Coarsen by lowering polynomial order in element */
+
 /** Data type for user variables; required by p4est */
 typedef struct user_data_s {
         int imsh; /**< velocity (0) and temperature (1) mesh indicator */
@@ -271,5 +278,67 @@ void wp4est_hang_get_info(int * hang_elm, int * hang_fsc, int * hang_edg)
  */
 void wp4est_fml_get_info(int64_t * family, int * nelf)
 ;
+
+/** Perform tree refinement
+ *
+ * @param max_level    max refinement level
+ */
+void wp4est_refine(int max_level)
+;
+
+/** Perform tree coarsening
+ */
+void wp4est_coarsen()
+;
+
+/** Perform 2:1 tree balancing
+ */
+void wp4est_balance()
+;
+
+/** Make tree copy for later comparison
+ *
+ * @param quad_data   do we test quadrant data
+ */
+void wp4est_tree_copy(int quad_data)
+;
+
+/** Check if tree was modified
+ *
+ * @param check       tree modification marker
+ * @param quad_data   do we test quadrant data
+ */
+void wp4est_tree_check(int * check, int quad_data)
+;
+
+/** Fill ref_mark in p4est block
+ *
+ * @param ref_mark   refinement mark array
+ */
+void wp4est_refm_put(int * ref_mark)
+;
+
+/** Fill element global mapping in p4est block
+ *
+ * @param el_gnum   element global mapping array
+ * @param el_lnum   element global mapping array
+ * @param el_nid   element global mapping array
+ */
+void wp4est_egmap_put(int * el_gnum,int * el_lnum,int * el_nid)
+;
+
+/** Get refinement/coarsening data to Neko
+ *
+ * @param map_nr     local number of unchanged elements
+ * @param rfn_nr     local number of refined elements
+ * @param crs_nr     local number of coarsened elements
+ * @param elgl_map   element mapping info for unchanged elements
+ * @param elgl_rfn   element mapping info for refined elements
+ * @param elgl_crs   element mapping info for coarsened elements
+ */
+void wp4est_msh_get_hst(int * map_nr, int * rfn_nr, int * crs_nr, int *elgl_map,
+		int * elgl_rfn, int * elgl_crs)
+;
+
 
 #endif /* NEKO_P4EST_FWRAP_H_ */

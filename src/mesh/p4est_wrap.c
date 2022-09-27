@@ -52,7 +52,7 @@
 #include "./p4est_wrap.h"
 
 /* Global variables
- *  notice I use tree_nek->user_pointer to store ghost quadrants data
+ *  notice I use tree_neko->user_pointer to store ghost quadrants data
  */
 static p4est_connectivity_t *connect_neko = NULL; /**< connectivity structure */
 static p4est_t *tree_neko = NULL; /**< tree structure */
@@ -617,7 +617,7 @@ void wp4est_nds_get_vmap(int * vmap) {
 }
 
 
-/* data type for mesh data transfer between nek5000 and p4est*/
+/* data type for mesh data transfer between neko and p4est*/
 typedef struct transfer_data_s {
   int64_t *gidx; /**< pointer to global element index array */
   int *level; /**< pointer to element level array */
@@ -968,3 +968,543 @@ void wp4est_fml_get_info(int64_t * family, int * nelf) {
   // copy number of family quads
   *nelf = iqf;
 }
+
+
+/* refinement, coarsening, balancing */
+
+/** Mark element for refinement
+ *
+ * @details Required by p4est_refine_ext
+ *
+ * @param p4est
+ * @param which_tree
+ * @param quadrant
+ * @return refinement mark
+ */
+int ref_mark_f (p4est_t * p4est, p4est_topidx_t which_tree,
+		p4est_quadrant_t * quadrant)
+{
+  user_data_t *data = (user_data_t *) quadrant->p.user_data;
+
+  if (data->ref_mark == AMR_RM_H_REF) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
+/** Mark element for coarsening
+ *
+ *  @details Required by p4est_coarsen_ext
+ *
+ * @param p4est
+ * @param which_tree
+ * @param quadrants
+ * @return coarsening mark
+ */
+int crs_mark_f (p4est_t * p4est, p4est_topidx_t which_tree,
+		p4est_quadrant_t * quadrants[])
+{
+  user_data_t *data;
+  int iwt, id;
+
+  /* check if all the children are coarsened */
+  iwt = 1;
+  for(id=0;id<P4EST_CHILDREN;++id){
+    /* get refinement mark */
+    data = (user_data_t *) quadrants[id]->p.user_data;
+    if (data->ref_mark != AMR_RM_H_CRS) {
+      iwt = 0;
+      break;
+    }
+  }
+  return iwt;
+}
+
+/** Refine/coarsen quadrant
+ *
+ * @details Required by p4est_refine_ext, p4est_coarsen_ext,
+ *  p4est_balance_ext. Performs operations on quad related
+ *  user data.
+ *
+ * @param p4est          forest
+ * @param which_tree     tree number
+ * @param num_outgoing   number of quadrants that are being replaced
+ * @param outgoing       replaced quads
+ * @param num_incoming   number of quadrants that are being added
+ * @param incoming       added quads
+ */
+void  quad_replace (p4est_t * p4est, p4est_topidx_t which_tree,
+		    int num_outgoing, p4est_quadrant_t * outgoing[],
+		    int num_incoming, p4est_quadrant_t * incoming[]) {
+
+  int id, il; // loop index
+  int ic; // children refinement status
+  int id_ch[P4EST_CHILDREN]; // child id
+  user_data_t * parent, * child;
+  p4est_quadrant_t tmp_q;
+
+  if (num_outgoing == P4EST_CHILDREN && num_incoming == 1) {
+    /* this is coarsening; I assume coarsening is not performed at balancing stage
+     * and there are no recursive coarsening */
+    /* get child id */
+    for(id=0;id<P4EST_CHILDREN;id++){
+      id_ch[id] = p4est_quadrant_child_id (outgoing[id]);
+    }
+
+    /* check consistency of refinement history; no previous actions on children*/
+    ic = 0;
+    for(id=0;id<P4EST_CHILDREN;id++){
+      child = (user_data_t *) outgoing[id]->p.user_data;
+      if (child->parent_gln != -1 || child->el_gln == -1) ic = 1;
+    }
+    if (ic) SC_ABORT("Recursive refinement/coarsening; aborting: quad_replace; coarsen\n");
+
+    /* Merge element data.
+     * I'm lazy here and assume refinement just copy curvature and
+     * BC data from children at external faces. It means I expect
+     * face value for neighbouring elements to be the same, so
+     * it is enough to take values of even and odd faces from
+     * first and last element respectively.
+     * Notice p4est does not give information about ordering of
+     * outgoing quads.
+     */
+    parent = (user_data_t *) incoming[0]->p.user_data;
+    /* fill refinement history data */
+    /* no parent */
+    parent->parent_gln = -1;
+    parent->parent_ln = -1;
+    parent->parent_nid = -1;
+    /* I was coarsened */
+    parent->el_gln = -1;
+    parent->el_ln = -1;
+    parent->el_nid = -1;
+    /* reset refine mark */
+    parent->ref_mark = AMR_RM_NONE;
+
+    for(id=0;id<P4EST_CHILDREN;id++){
+      child = (user_data_t *) outgoing[id]->p.user_data;
+      if (id_ch[id] == 0) {
+	/* first element; copy element type data */
+	parent->imsh = child->imsh;
+	parent->igrp = child->igrp;
+	/* copy faces 0, 2 and 4 */
+	for(il=0;il<P4EST_FACES;il=il+2){
+	  /* curvature and boundary flag */
+	  parent->crv[il] = child->crv[il];
+	  parent->bc[il] = child->bc[il];
+	}
+      } else if(id_ch[id] == (P4EST_CHILDREN-1)) {
+	/* last element; copy faces 1, 3 and 5 */
+	for(il=1;il<P4EST_FACES;il=il+2){
+	  /* curvature and boundary flag */
+	  parent->crv[il] = child->crv[il];
+	  parent->bc[il] = child->bc[il];
+	}
+      }
+      /* copy coarsening data */
+      parent->children_gln[id_ch[id]] = child->el_gln;
+      parent->children_ln[id_ch[id]] = child->el_ln;
+      parent->children_nid[id_ch[id]] = child->el_nid;
+    }
+
+#ifdef DEBUG
+    /* for testing */
+    user_data_t * child0, * child1;
+    for(id=0;id<P4EST_CHILDREN;++id){
+      child = (user_data_t *) outgoing[id]->p.user_data;
+      printf("crs chidlren %i %i %i\n",parent->children_gln[id_ch[id]],
+	     parent->children_ln[id_ch[id]],parent->children_nid[id_ch[id]]);
+      if (id_ch[id] == 0)
+	child0 = (user_data_t *) outgoing[id]->p.user_data;
+      if (id_ch[id] == (P4EST_CHILDREN-1))
+	child1 = (user_data_t *) outgoing[id]->p.user_data;
+    }
+    printf("crs parent gln %i %i %i %i\n",parent->children_gln[0],parent->children_gln[1],
+	   parent->children_gln[2],parent->children_gln[3]);
+    printf("crs parent ln %i %i %i %i\n",parent->children_ln[0],parent->children_ln[1],
+	   parent->children_ln[2],parent->children_ln[3]);
+    printf("crs parent nid %i %i %i %i\n",parent->children_nid[0],parent->children_nid[1],
+	   parent->children_nid[2],parent->children_nid[3]);
+    for(il=0;il<P4EST_FACES;++il){
+      printf("crs CRV BC %i %i %i %i %i %i %i \n",il,
+	     parent->crv[il],parent->bc[il],
+	     child0->crv[il],child0->bc[il],
+	     child1->crv[il],child1->bc[il]);
+    }
+#endif
+
+  } else if (num_outgoing == 1 && num_incoming == P4EST_CHILDREN) {
+    /* this is refinement; this part can be executed at refinement and balancing stage;
+     * Even though I do not allow for recursive refinement, there is possibility of refining
+     * the previously coarsened element and I have to keep track of refinement history */
+    /* get child id */
+    for(id=0;id<P4EST_CHILDREN;id++){
+      id_ch[id] = p4est_quadrant_child_id (incoming[id]);
+    }
+
+    /* check refinement status*/
+    parent = (user_data_t *) outgoing[0]->p.user_data;
+    if (parent->parent_gln != -1){
+      /* refined element; no recursive refinement allowed */
+      SC_ABORT("Recursive refinement; aborting: quad_replace; refine\n");
+    }
+    ic = -1;
+    for (il=0; il < P4EST_CHILDREN; il++) {
+      if(parent->children_gln[il] != -1) ic = 1;
+    }
+
+    for (id=0;id<P4EST_CHILDREN;++id){
+      child = (user_data_t *) incoming[id]->p.user_data;
+      /* copy data from the parent (filled in refine_fn) */
+      child->imsh = parent->imsh;
+      child->igrp = parent->igrp;
+      //memcpy (child, parent, p4est->data_size);
+
+      /* reset refine mark
+       * be careful not to coarsen quads just refined
+       */
+      child->ref_mark = AMR_RM_NONE;
+
+      /* update refinement history data */
+      if (ic == -1 && parent->el_gln != -1){
+	/* unchanged element; neither coarsened nor refined;
+	 * proceed with refining */
+
+	/* store parent number on neko side */
+	child->parent_gln = parent->el_gln;
+	child->parent_ln = parent->el_ln;
+	child->parent_nid = parent->el_nid;
+	/* who am I */
+	child->el_gln = id_ch[id];
+	child->el_ln = -1;
+	child->el_nid = -1;
+
+	/* reset coarsening data */
+	for(il=0;il<P4EST_CHILDREN;++il){
+	  child->children_gln[il] = -1;
+	  child->children_ln[il] = -1;
+	  child->children_nid[il] = -1;
+	}
+      } else if (ic == 1 && parent->el_gln == -1){
+	/* coarsened element; put information back so no coarsening/refinement
+	 * operation would be performed on neko variables */
+
+	/* store parent number on neko side */
+	child->parent_gln = -1;
+	child->parent_ln = -1;
+	child->parent_nid = -1;
+	/* restore old global element number */
+	child->el_gln = parent->children_gln[id_ch[id]];
+	child->el_ln = parent->children_ln[id_ch[id]];
+	child->el_nid = parent->children_nid[id_ch[id]];
+
+	/* reset children data */
+	for(il=0;il<P4EST_CHILDREN;++il){
+	  child->children_gln[il] = -1;
+	  child->children_ln[il] = -1;
+	  child->children_nid[il] = -1;
+	}
+      } else {
+	/* wrong option */
+	SC_ABORT("Wrong refinement history; aborting: quad_replace; refine\n");
+      }
+
+      /* go across all faces */
+      for(il=0;il<P4EST_FACES;++il){
+	/* test if the face is an external one
+	 * (with respect to tree, not the mesh)
+	 * find face neighbour
+	 */
+	p4est_quadrant_face_neighbor (incoming[id], il, &tmp_q);
+	/* does neighbour belong to the same tree */
+	if(p4est_quadrant_is_inside_root (&tmp_q)){
+	  /* internal face*/
+	  child->crv[il] = 0;
+	  child->bc[il] = 0;
+	}
+	else{
+	  /* external face
+	   * copy curvature and bc data */
+	  child->crv[il] = parent->crv[il];
+	  child->bc[il] = parent->bc[il];
+	}
+
+      }
+#ifdef DEBUG
+      /*for testing */
+      printf("ref %i %i\n",child->el_gln,child->parent_gln);
+      for(il=0;il<P4EST_FACES;++il){
+	printf("BC %i %i %i %i %i \n",il,child->crv[il],child->bc[il],
+	       parent->crv[il],parent->bc[il]);
+      }
+#endif
+    }
+
+  } else {
+    /* something is wrong */
+    SC_ABORT("Wrong in/out quad number; aborting: quad_replace\n");
+  }
+}
+
+/*tree refinement */
+void wp4est_refine(int max_level)
+{
+  int refine_recursive = 0;
+  p4est_refine_ext (tree_neko, refine_recursive, max_level,
+		    ref_mark_f, NULL, quad_replace);
+}
+
+/* tree coarsening */
+void wp4est_coarsen()
+{
+  int coarsen_recursive = 0;
+  int callback_orphans = 0;
+  p4est_coarsen_ext (tree_neko, coarsen_recursive, callback_orphans,
+		     crs_mark_f, NULL, quad_replace);
+}
+
+/* 2:1 tree balancing */
+void wp4est_balance()
+{
+  p4est_balance_ext (tree_neko, P4EST_CONNECT_FULL,
+		     NULL, quad_replace);
+}
+
+/* Make tree copy for later comparison */
+void wp4est_tree_copy(int quad_data) {
+  if (tree_neko_compare) p4est_destroy (tree_neko_compare);
+  tree_neko_compare = p4est_copy (tree_neko, quad_data);
+}
+
+/* Check if three was modified */
+void wp4est_tree_check(int * check, int quad_data) {
+  if (tree_neko_compare) {
+    *check = p4est_is_equal(tree_neko, tree_neko_compare, quad_data);
+    p4est_destroy (tree_neko_compare);
+    tree_neko_compare = NULL;
+  } else {
+    SC_ABORT("Tree comparison; aborting: no tree_neko_compare\n");
+  }
+}
+
+/** @brief Iterate over element volumes to transfer element refinement mark
+ *
+ * @details Required by wp4est_refm_put
+ *
+ * @param info
+ * @param user_data
+ */
+void iter_refm(p4est_iter_volume_info_t * info, void *user_data) {
+  user_data_t *data = (user_data_t *) info->quad->p.user_data;
+  int *ref_mark = (int *) user_data;
+
+  // which quad (local and global element number)
+  p4est_tree_t *tree;
+  p4est_locidx_t iwl;
+  int iwlt;
+  int il;// loop index
+
+  // get quad number
+  tree = p4est_tree_array_index(info->p4est->trees, info->treeid);
+  // local quad number
+  iwl = info->quadid + tree->quadrants_offset;
+  iwlt = (int) iwl;
+
+  // refinement mark for given quad
+  data->ref_mark = ref_mark[iwlt];
+}
+
+/* fill ref_mark in p4est block */
+void wp4est_refm_put(int * ref_mark) {
+#ifdef P4_TO_P8
+  p4est_iterate(tree_neko, ghost_neko,(void *) ref_mark, iter_refm,
+		NULL, NULL, NULL);
+#else
+  p4est_iterate(tree_neko, ghost_neko,(void *) ref_mark, iter_refm,
+		NULL, NULL);
+#endif
+}
+
+/* data type for partitioning data transfer between neko and p4est*/
+typedef struct transfer_part_s {
+  int *gnum; /**< pointer to element level array */
+  int *lnum; /**< pointer to element group array */
+  int *nid; /**< pointer to mpi rank owning the element */
+} transfer_part_t;
+
+/** @brief Iterate over element volumes to transfer element global mapping
+ *
+ * @details Required by wp4est_refm_put
+ *
+ * @param info
+ * @param user_data
+ */
+void iter_emap(p4est_iter_volume_info_t * info, void *user_data) {
+  user_data_t *data = (user_data_t *) info->quad->p.user_data;
+  transfer_part_t *el_map = (transfer_part_t *) user_data;
+
+  // which quad (local and global element number)
+  p4est_tree_t *tree;
+  p4est_locidx_t iwl;
+  int iwlt, iwg;
+  int ifc;// loop index
+
+  // get quad number
+  tree = p4est_tree_array_index(info->p4est->trees, info->treeid);
+  // local quad number
+  iwl = info->quadid + tree->quadrants_offset;
+  iwlt = (int) iwl;
+  // global quad number
+  iwg = (int) info->p4est->global_first_quadrant[info->p4est->mpirank] + iwlt;
+
+  // sanity check
+  if (el_map->gnum[iwlt] != iwg+1){
+    SC_ABORT("Wrong global element number; aborting: iter_emap\n");
+  }
+
+  // update element mapping data
+  data->el_gln = iwg;
+  data->el_ln = el_map->lnum[iwlt];
+  data->el_nid = el_map->nid[iwlt];
+  data->parent_gln = -1;
+  data->parent_ln = -1;
+  data->parent_nid = -1;
+  for (ifc = 0; ifc < P4EST_CHILDREN; ++ifc) {
+    data->children_gln[ifc] = -1;
+    data->children_ln[ifc] = -1;
+    data->children_nid[ifc] = -1;
+  }
+}
+
+/* fill element global mapping in p4est block */
+void wp4est_egmap_put(int * el_gnum,int * el_lnum,int * el_nid) {
+  transfer_part_t el_map;
+  el_map.gnum = el_gnum;
+  el_map.lnum = el_lnum;
+  el_map.nid = el_nid;
+#ifdef P4_TO_P8
+  p4est_iterate(tree_neko, ghost_neko,(void *) &el_map, iter_emap,
+		NULL, NULL, NULL);
+#else
+  p4est_iterate(tree_neko, ghost_neko,(void *) &el_map, iter_emap,
+		NULL, NULL);
+#endif
+}
+
+/* data type for refinement history data transfer between neko and p4est*/
+typedef struct transfer_hst_s {
+  int map_nr; /**< local number of unchanged elements */
+  int rfn_nr; /**< local number of refined elements */
+  int crs_nr; /**< local number of coarsened elements */
+  int *elgl_map; /**< element global mapping info for unchanged elements */
+  int *elgl_rfn; /**< element global mapping info for refined elements */
+  int *elgl_crs; /**< element global mapping info for coarsened elements */
+} transfer_hst_t;
+
+#define MIN( a, b ) ( ( a > b) ? b : a )
+
+/** @brief Iterate over element volumes to transfer refinement history data
+ *
+ * @details Required by wp4est_msh_get_hst
+ *
+ * @param info
+ * @param user_data
+ */
+void iter_msh_hst(p4est_iter_volume_info_t * info, void *user_data) {
+  user_data_t *data = (user_data_t *) info->quad->p.user_data;
+  transfer_hst_t *trans_data = (transfer_hst_t *) user_data;
+
+  // which quad (local and global element number)
+  p4est_tree_t *tree;
+  p4est_locidx_t iwl;
+  int iwlt, iwg;
+  int ifc, ifl, ic, il;// loop index
+
+  // get quad number
+  tree = p4est_tree_array_index(info->p4est->trees, info->treeid);
+  // local quad number
+  iwl = info->quadid + tree->quadrants_offset;
+  iwlt = (int) iwl;
+  // global quad number
+  iwg = (int) info->p4est->global_first_quadrant[info->p4est->mpirank] + iwlt;
+
+  // check refinement status
+  ic = -1;
+  for (il=0; il < P4EST_CHILDREN; il++) {
+    if(data->children_gln[il] != -1) ic = 1;
+  }
+
+  if (data->parent_gln == -1 && ic == -1) {
+    // no refinement
+    // count elements
+    trans_data->map_nr = trans_data->map_nr + 1;
+    // set old element position
+    trans_data->elgl_map[3*iwlt] = data->el_gln + 1;
+    trans_data->elgl_map[3*iwlt+1] = data->el_ln;
+    trans_data->elgl_map[3*iwlt+2] = data->el_nid;
+  } else if (data->parent_gln != -1) {
+    // refinement
+    // count elements
+    trans_data->rfn_nr = trans_data->rfn_nr + 1;
+    // set dummy element map
+    trans_data->elgl_map[3*iwlt] = 0;
+    trans_data->elgl_map[3*iwlt+1] = 0;
+    trans_data->elgl_map[3*iwlt+2] = 0;
+    ic = (trans_data->rfn_nr-1)*5;
+    // current global element number
+    trans_data->elgl_rfn[ic] = iwg + 1;
+    // old parent element position
+    trans_data->elgl_rfn[ic +1] = data->parent_gln + 1;
+    trans_data->elgl_rfn[ic +2] = data->parent_ln;
+    trans_data->elgl_rfn[ic +3] = data->parent_nid;
+    // child position; numbered 0,..,P4EST_CHILDREN-1
+    trans_data->elgl_rfn[ic +4] = data->el_gln;
+  } else {
+    // coarsening
+    // count elements
+    trans_data->crs_nr = trans_data->crs_nr + 1;
+    // set dummy element map
+    trans_data->elgl_map[3*iwlt] = 0;
+    trans_data->elgl_map[3*iwlt+1] = 0;
+    trans_data->elgl_map[3*iwlt+2] = 0;
+    // new global position
+    ic =(trans_data->crs_nr - 1)*4*P4EST_CHILDREN;
+    trans_data->elgl_crs[ic] = iwg + 1;
+    // old global position
+    trans_data->elgl_crs[ic+1] = data->children_gln[0] + 1;
+    trans_data->elgl_crs[ic+2] = data->children_ln[0];
+    trans_data->elgl_crs[ic+3] = data->children_nid[0];
+    for (il = 1; il < P4EST_CHILDREN; il++) {
+      // new dummy global position
+      trans_data->elgl_crs[ic+il*4] = 0;
+      // old global position
+      trans_data->elgl_crs[ic+il*4+1] = data->children_gln[il] + 1;
+      trans_data->elgl_crs[ic+il*4+2] = data->children_ln[il];
+      trans_data->elgl_crs[ic+il*4+3] = data->children_nid[il];
+    }
+  }
+}
+
+// get refinement history data to Neko
+void wp4est_msh_get_hst(int * map_nr, int * rfn_nr, int * crs_nr, int *elgl_map,
+			int * elgl_rfn, int * elgl_crs) {
+  transfer_hst_t transfer_data;
+  transfer_data.map_nr = 0;
+  transfer_data.rfn_nr = 0;
+  transfer_data.crs_nr = 0;
+  transfer_data.elgl_map = elgl_map;
+  transfer_data.elgl_rfn = elgl_rfn;
+  transfer_data.elgl_crs = elgl_crs;
+#ifdef P4_TO_P8
+  p4est_iterate(tree_neko, ghost_neko,(void *) &transfer_data, iter_msh_hst,
+		NULL, NULL, NULL);
+#else
+  p4est_iterate(tree_neko, ghost_neko,(void *) &transfer_data, iter_msh_hst,
+		NULL, NULL);
+#endif
+  *map_nr = transfer_data.map_nr;
+  *rfn_nr = transfer_data.rfn_nr;
+  *crs_nr = transfer_data.crs_nr;
+}
+

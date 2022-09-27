@@ -311,7 +311,7 @@ endif
 if ENABLE_P4EST
 #
 # Place for p4est and sc related stuff
-neko_fortran_SOURCES += mesh/p4est.F90
+neko_fortran_SOURCES += mesh/p4est.F90 mesh/amr.f90
 libneko_a_SOURCES += mesh/p4est_wrap.c
 endif
 

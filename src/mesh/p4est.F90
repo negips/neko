@@ -15,7 +15,7 @@ module p4est
   implicit none
 
   private
-  public :: p4_init, p4_finalize, p4_msh_get
+  public :: p4_mesh_restr_t, p4_init, p4_finalize, p4_msh_get, p4_refine, p4
 
   ! Following node types contain geometrical and conectivity information for the mesh
   ! Type for independent nodes
@@ -251,6 +251,13 @@ module p4est
      type(p4_element_t) :: elem
   end type p4_mesh_import_t
 
+  ! type for element restructure
+  type p4_mesh_restr_t
+     integer(i4) :: map_nr, rfn_nr, crs_nr
+     integer(i4), allocatable, dimension(:, :) :: elgl_map, elgl_rfn
+    integer(i4), allocatable, dimension(:, :, :) :: elgl_crs
+  end type p4_mesh_restr_t
+
   ! connectivity parameter arrays
   ! face vertices
   integer, parameter, dimension(4,6) :: p4_vface = reshape(&
@@ -455,7 +462,55 @@ module p4est
        type(c_ptr), value :: family
        integer(c_int) :: nelf
      end subroutine wp4est_fml_get_info
-     
+
+     subroutine wp4est_refine(max_level) &
+          & bind(c, name = 'wp4est_refine')
+       USE, INTRINSIC :: ISO_C_BINDING
+       integer(c_int), value :: max_level
+     end subroutine wp4est_refine
+
+     subroutine wp4est_coarsen() &
+          & bind(c, name = 'wp4est_coarsen')
+       USE, INTRINSIC :: ISO_C_BINDING
+     end subroutine wp4est_coarsen
+
+     subroutine wp4est_balance() &
+          & bind(c, name = 'wp4est_balance')
+       USE, INTRINSIC :: ISO_C_BINDING
+     end subroutine wp4est_balance
+
+     subroutine wp4est_tree_copy(quad_data) &
+          & bind(c, name = 'wp4est_tree_copy')
+       USE, INTRINSIC :: ISO_C_BINDING
+       integer(c_int), value :: quad_data
+     end subroutine wp4est_tree_copy
+
+     subroutine wp4est_tree_check(check, quad_data) &
+          & bind(c, name = 'wp4est_tree_check')
+       USE, INTRINSIC :: ISO_C_BINDING
+       integer(c_int) :: check
+       integer(c_int), value :: quad_data
+     end subroutine wp4est_tree_check
+
+     subroutine wp4est_refm_put(ref_mark) &
+          & bind(c, name = 'wp4est_refm_put')
+       USE, INTRINSIC :: ISO_C_BINDING
+       type(c_ptr), value :: ref_mark
+     end subroutine wp4est_refm_put
+
+     subroutine wp4est_egmap_put(el_gnum, el_lnum, el_nid) &
+          & bind(c, name = 'wp4est_egmap_put')
+       USE, INTRINSIC :: ISO_C_BINDING
+       type(c_ptr), value :: el_gnum, el_lnum, el_nid
+     end subroutine wp4est_egmap_put
+
+     subroutine wp4est_msh_get_hst(map_nr, rfn_nr, crs_nr, elgl_map, elgl_rfn, elgl_crs) &
+          & bind(c, name = 'wp4est_msh_get_hst')
+       USE, INTRINSIC :: ISO_C_BINDING
+       integer(c_int) :: map_nr, rfn_nr, crs_nr
+       type(c_ptr), value :: elgl_map, elgl_rfn, elgl_crs
+     end subroutine wp4est_msh_get_hst
+
   end interface
 
 contains
@@ -531,10 +586,8 @@ contains
        call wp4est_cnn_del()
        ! finalise p4est and sc
        call wp4est_finalize(log_thr)
-       !
+
        p4%initialised = .false.
-    else
-       call neko_error('p4est not initialised')
     end if
 
     return
@@ -631,6 +684,87 @@ contains
 
     return
   end subroutine p4_msh_get
+
+  !> perform refinement based on refinement flag
+  subroutine p4_refine(ref_mark, level_max, ifmod, msh_rstr)
+    ! argument list
+    integer(i4), dimension(:), intent(in) :: ref_mark
+    integer(i4), intent(in) :: level_max
+    logical, intent(out) :: ifmod
+    type(p4_mesh_restr_t), intent(out) :: msh_rstr
+    ! local variables
+    integer(i4) :: il, itmp
+    integer(i4), target, allocatable, dimension(:) :: lref_mark, el_gnum, el_lnum, el_nid
+    ! element restructure data
+    integer(i4) :: map_nr, rfn_nr, crs_nr
+    integer(i4), target, allocatable, dimension(:, :) :: elgl_map, elgl_rfn
+    integer(i4), target, allocatable, dimension(:, :, :) :: elgl_crs
+
+    ! THIS SHOULD BE PROBABLY MOVED FROM HERE
+    ! partition strategy for p4est
+    ! 0 - equal element count
+    ! 1 - octants families prepared for coarsening
+    integer(i4), parameter :: p4part = 1
+
+    ! copy paremeter for forest comparison in p4est
+    ! 0 - no check of quadrant data
+    ! 1 - check if quadrant data are identical
+    integer(i4), parameter :: p4test = 1
+
+    itmp = size(ref_mark)
+    if (itmp /= p4%elem%nelv) call neko_error('Inconsistent array size')
+
+    ! put refinement mark in p4est
+    allocate(lref_mark(p4%elem%nelv))
+    lref_mark(:) = ref_mark(:)
+    ! PLACE FOR LOCAL CONSISTENCY CHECKS
+    call wp4est_refm_put(c_loc(lref_mark))
+
+    ! put element distribution info in p4est
+    ! THIS IS JUST A TESTING VERSION FOR REFINE ALL
+    allocate(el_gnum(p4%elem%nelv), el_lnum(p4%elem%nelv), el_nid(p4%elem%nelv))
+    do il = 1, p4%elem%nelv
+       el_gnum(il) = p4%elem%gidx(il)
+       el_lnum(il) = il
+    end do
+    el_nid(:) = pe_rank
+    call wp4est_egmap_put(c_loc(el_gnum), c_loc(el_lnum), c_loc(el_nid))
+
+    ! perform local refine/coarsen/balance on p4est side
+    call wp4est_tree_copy(p4test)
+    call wp4est_refine(level_max)
+    call wp4est_coarsen()
+    call wp4est_balance()
+    call wp4est_tree_check(itmp, p4test)
+
+    if (itmp == 0 ) then
+       ifmod = .true.
+    else
+       ifmod = .false.
+    end if
+
+    ! if mesh was modified extract data to restructure elements
+    if (ifmod) then
+       itmp = 2**p4%dim ! number of vertices
+       allocate(elgl_map(3, itmp*p4%elem%nelv), &
+            & elgl_rfn(5, itmp*p4%elem%nelv), &
+            & elgl_crs(4, itmp, p4%elem%nelv))
+       call wp4est_msh_get_hst(map_nr, rfn_nr, crs_nr, c_loc(elgl_map), &
+            & c_loc(elgl_rfn), c_loc(elgl_crs))
+       ! move data
+       msh_rstr%map_nr = map_nr
+       msh_rstr%rfn_nr = rfn_nr
+       msh_rstr%crs_nr = crs_nr
+       call MOVE_ALLOC(elgl_map, msh_rstr%elgl_map)
+       call MOVE_ALLOC(elgl_rfn, msh_rstr%elgl_rfn)
+       call MOVE_ALLOC(elgl_crs, msh_rstr%elgl_crs)
+    end if
+
+    ! free memory
+    deallocate(lref_mark, el_gnum, el_lnum, el_nid)
+
+    return
+  end subroutine p4_refine
 
   subroutine p4_mesh_import_free(p4)
     ! argument list
@@ -1397,16 +1531,12 @@ contains
     !local variables
     
 
-    ! get vertex neighbours; most probably not needed
-    call p4_vertex_neighbour_fill(msh, p4)
+    ! get vertex neighbours; not used
+    !call p4_vertex_neighbour_fill(msh, p4)
 
+    ! USED IN gather_scatter.f90; MORE INVESTIGATION NEEDED
     ! get face neighbours; is it reall y needed?
     call p4_face_neighbour_fill(msh, p4)
-
-    !! @todo neighbour list for edges
-    ! THIS IS SIMLAR TO VERTEX (I SHOULD COMBINE THE ROUTINES TO MAKE IT GENERAL)
-    ! BUT IS NOT USED NOW, AS EDGE INFO IS NOT EXPORTED RIGHT NOW
-    call p4_edge_neighbour_fill(msh, p4)
 
     return
   end subroutine p4_neighbour_fill
@@ -1672,129 +1802,6 @@ contains
     return
   end subroutine p4_face_neighbour_fill
 
-  ! Fill the mesh type with edge neighbour information
-  subroutine p4_edge_neighbour_fill(msh, p4)
-    ! argument list
-    type(mesh_t), intent(inout) :: msh
-    type(p4_mesh_import_t), intent(in) :: p4
-    !local variables
-    integer(i4) :: il, jl, kl, ll, ml
-    integer(i4) :: itmp, ierr
-    type(stack_i4_t), allocatable :: edge_neigh(:) ! edge neighbours; not present in mesh type
-    integer(i4), allocatable, dimension(:) :: cmoff ! offest in send/receive buffers
-    integer(i4) :: neighn
-    integer(i4), pointer, dimension(:) :: neighl
-    integer(i4), allocatable, dimension(:) :: rbuf, sbuf ! send/receive buffers
-    type(MPI_Request), allocatable, dimension(:) :: request ! MPI request
-    type(MPI_Status), allocatable, dimension(:) :: status ! MPI status
-
-    if (msh%gdim == 3) then
-       ! gether data
-       allocate(edge_neigh(msh%meds))
-       do il = 1, msh%meds
-          call edge_neigh(il)%init()
-       end do
-       do il = 1, msh%nelv
-          ! get global element id; NOTE there is type casting from int8
-          itmp = int(p4%elem%gidx(il), i4)
-          do jl = 1, NEKO_HEX_NEDS
-             call edge_neigh(p4%elem%edge%lmap(jl, il))%push(itmp)
-          end do
-       end do
-
-       ! nonlocal edge neighbours
-       ! count size of send/receive buffers
-       allocate(cmoff(p4%elem%edge%nrank), request(p4%elem%edge%nrank-1), &
-            & status(p4%elem%edge%nrank-1))
-       itmp = 1
-       cmoff(itmp) = 1
-       do il= 1, p4%elem%edge%nrank ! mpi rank loop
-          if (p4%elem%edge%lrank(il) /= pe_rank) then
-             itmp = itmp + 1 ! mpi rank loop
-             cmoff(itmp) = cmoff(itmp - 1)
-             do jl = p4%elem%edge%loff(il), p4%elem%edge%loff(il+1) -1
-             ! sum number of local edge neighbours for a given rank
-             neighn = edge_neigh(p4%elem%edge%lshare(jl))%size()
-             cmoff(itmp) = cmoff(itmp) + 2 + neighn
-          end do
-       end if
-    end do
-    allocate(rbuf(cmoff(p4%elem%edge%nrank)), sbuf(cmoff(p4%elem%edge%nrank)))
-    ! set non-blocking receive
-    itmp = 0
-    do il=1, p4%elem%edge%nrank ! mpi rank loop
-       if (p4%elem%edge%lrank(il) /= pe_rank) then
-          itmp = itmp + 1 ! count messages
-          jl = cmoff(itmp+1) - cmoff(itmp)
-          call MPI_IRecv(rbuf(cmoff(itmp):cmoff(itmp+1)-1), jl, MPI_INTEGER, &
-               & p4%elem%edge%lrank(il), jl, NEKO_COMM, request(itmp), ierr)
-       end if
-    end do
-
-    ! redistribute edge information
-    itmp = 0
-    do il = 1, p4%elem%edge%nrank ! mpi rank loop
-       if (p4%elem%edge%lrank(il) /= pe_rank) then
-          itmp = itmp + 1 ! count messages
-          ll = cmoff(itmp)
-          do jl = p4%elem%edge%loff(il), p4%elem%edge%loff(il+1) - 1
-             sbuf(ll) = p4%elem%edge%lgidx(p4%elem%edge%lshare(jl)) ! edge global id
-             ll = ll + 1
-             ! extract local neighbours
-             neighn = edge_neigh(p4%elem%edge%lshare(jl))%size()
-             neighl => edge_neigh(p4%elem%edge%lshare(jl))%array()
-             sbuf(ll) = neighn ! local number of neighbours
-             ll = ll + 1
-             do kl = 1, neighn
-                sbuf(ll) = neighl(kl)
-                ll = ll + 1
-             end do
-          end do
-          ! sanity check
-          if (ll /= cmoff(itmp + 1)) &
-               & call neko_error('Inconsistent number of local dege neighbours; receive.')
-          jl = cmoff(itmp+1) - cmoff(itmp)
-          call MPI_Send(sbuf(cmoff(itmp):cmoff(itmp+1)-1), jl, MPI_INTEGER, &
-               & p4%elem%edge%lrank(il), jl, NEKO_COMM, ierr)
-       end if
-    end do
-
-    ! finalize communication
-    call MPI_Waitall(p4%elem%edge%nrank - 1, request, status, ierr)
-
-    ! extract data
-    itmp = 0
-    do il = 1, p4%elem%edge%nrank ! mpi rank loop
-       if (p4%elem%edge%lrank(il) /= pe_rank) then
-          itmp = itmp + 1 ! count messages
-          ll = cmoff(itmp)
-          do jl = p4%elem%edge%loff(il), p4%elem%edge%loff(il+1) - 1
-             ! check edge global id
-             if (p4%elem%edge%lgidx(p4%elem%edge%lshare(jl)) /= rbuf(ll)) &
-                  & call neko_error('Inconsistent global edge number in neighbour exchange.')
-             ll = ll + 1
-             neighn = rbuf(ll)
-             ll = ll + 1
-             do kl = 1, neighn
-                ml = -rbuf(ll)
-                call edge_neigh(p4%elem%edge%lshare(jl))%push(ml)
-                ll = ll + 1
-             end do
-          end do
-          ! sanity check
-          if (ll /= cmoff(itmp + 1)) &
-               & call neko_error('Inconsistent number of local edge neighbours; extract.')
-       end if
-    end do
-
-    deallocate(cmoff, request, status, rbuf, sbuf)
-    else
-       call neko_error("Invalid dimension")
-    end if
-
-    return
-  end subroutine p4_edge_neighbour_fill
-
   ! Fill the mesh type with distdata information from p4_mesh_import type
   subroutine p4_distdata_fill(msh, p4)
     ! argument list
@@ -1854,7 +1861,7 @@ contains
        do il = 1, p4%elem%edge%nrank
           if (p4%elem%edge%lrank(il) == pe_rank) then
              do jl = p4%elem%edge%loff(il), p4%elem%edge%loff(il+1) - 1
-                call distdata_set_shared_facet(msh%ddata, p4%elem%edge%lshare(jl))
+                call distdata_set_shared_edge(msh%ddata, p4%elem%edge%lshare(jl))
              end do
              exit
           end if
@@ -1958,6 +1965,14 @@ contains
     call neko_error('NEKO needs to be built with P4EST support')
     return
   end subroutine p4_msh_get
+
+  subroutine p4_refine(ref_mark)
+    integer(i4), dimension(:), intent(inout) :: refmark
+
+    call neko_error('NEKO needs to be built with P4EST support')
+    return
+  end subroutine p4_refine
+
 #endif
 
   ! Following stuff should be in math, but right now there is no clear division of routines as

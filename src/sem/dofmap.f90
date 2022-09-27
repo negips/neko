@@ -34,6 +34,7 @@
 !! @details A mapping defined based on a function space and a mesh
 module dofmap
   use neko_config
+  use p4est
   use mesh
   use space
   use tuple
@@ -113,6 +114,31 @@ contains
        call dofmap_number_points(this)
        call dofmap_number_edges(this)
     end if
+
+!!$    testing : block
+!!$      integer :: il, jl, kl, ll, ierr, iunit
+!!$      character(len=2) :: pe_sid
+!!$      call MPI_Barrier(NEKO_COMM, ierr)
+!!$      write(pe_sid, '(i2.2)') pe_rank
+!!$      open(newunit=iunit,file='test'//pe_sid//'.txt')
+!!$      write(iunit,*) 'TEST',pe_rank,msh%mpts,msh%glb_mpts, &
+!!$           &msh%mfcs,msh%glb_mfcs,msh%meds,msh%glb_meds ,Xh%lx
+!!$      write(iunit,*) '  '
+!!$      do il = 1, msh%nelv
+!!$         do ll = 1, Xh%lz
+!!$            do kl = 1, Xh%ly
+!!$               write(iunit,'(12i7,4x,8l)') pe_rank,msh%offset_el + il, kl, ll, &
+!!$                    & (this%dof(jl,kl,ll,il),jl=1,Xh%lx), &
+!!$                    & (this%shared_dof(jl,kl,ll,il),jl=1,Xh%lx)
+!!$            end do
+!!$            write(iunit,*) '  '
+!!$         end do
+!!$         write(iunit,*) '======================================='
+!!$      end do
+!!$      close(iunit)
+!!$      call MPI_Barrier(NEKO_COMM, ierr)
+!!$      call neko_error('This is not error.')
+!!$    end block testing
 
     !
     ! Generate x,y,z-coordinates for all dofs
@@ -196,12 +222,30 @@ contains
   !> Assign numbers to each dofs on points
   subroutine dofmap_number_points(this)
     type(dofmap_t), target :: this
-    integer :: i
+    integer :: i, il ,jl, nvert, ix, iy, iz
     type(mesh_t), pointer :: msh
     type(space_t), pointer :: Xh
 
     msh => this%msh
     Xh => this%Xh
+    if (p4%initialised) then
+       if (msh%gdim .eq. 2) then
+          call neko_error('2D dof point not supported yet.')
+       else
+          nvert = 2**p4%dim
+          do il = 1, msh%nelv
+             do jl = 1, nvert
+                ix = mod(jl -1 ,2)
+                iy = mod(jl -1 ,4)/2
+                iz = (jl - 1)/4
+                this%dof(ix*(Xh%lx - 1) + 1, iy*(Xh%ly - 1) + 1, iz*(Xh%lz - 1) + 1, il) = &
+                     & p4%elem%vert%lgidx(p4%elem%vert%lmap(jl,il))
+                this%shared_dof(ix*(Xh%lx - 1) + 1, iy*(Xh%ly - 1) + 1, iz*(Xh%lz - 1) + 1, il) = &
+                     & msh%ddata%shared_point%element(p4%elem%vert%lmap(jl,il))
+             end do
+          end do
+       end if
+    else
     if (msh%gdim .eq. 2) then
        do i = 1, msh%nelv
           this%dof(1, 1, 1, i) = &
@@ -225,7 +269,7 @@ contains
           this%shared_dof(Xh%lx, Xh%ly, 1, i) = &
                mesh_is_shared(msh, msh%elements(i)%e%pts(3)%p)
        end do
-    else    
+    else
        do i = 1, msh%nelv
           this%dof(1, 1, 1, i) = &
                int(msh%elements(i)%e%pts(1)%p%id(), i8)
@@ -270,6 +314,7 @@ contains
                mesh_is_shared(msh, msh%elements(i)%e%pts(7)%p)
        end do
     end if
+    end if
   end subroutine dofmap_number_points
 
   !> Assing numbers to dofs on edges
@@ -277,7 +322,7 @@ contains
     type(dofmap_t), target :: this
     type(mesh_t), pointer :: msh
     type(space_t), pointer :: Xh
-    integer :: i,j,k
+    integer :: i,j,k, ix, iy, iz
     integer :: global_id        
     type(tuple_i4_t) :: edge
     integer(kind=i8) :: num_dofs_edges(3) ! #dofs for each dir (r, s, t)
@@ -293,6 +338,91 @@ contains
     num_dofs_edges(3) =  int(Xh%lz - 2, i8)
     edge_offset = int(msh%glb_mpts, i8) + int(1, 4)
 
+    if (p4%initialised) then
+       if (msh%gdim .eq. 2) then
+          call neko_error('2D dof edge not supported yet.')
+       else
+          do i = 1, msh%nelv
+             ! Edges along r-direction
+             do j = 1, 4
+                iy = mod(j - 1 ,2)
+                iz = (j - 1)/2
+                shared_dof = msh%ddata%shared_edge%element(p4%elem%edge%lmap(j,i))
+                global_id = p4%elem%edge%lgidx(p4%elem%edge%lmap(j,i))
+                edge_id = edge_offset + int((global_id - 1), i8) * num_dofs_edges(1)
+                ! check aligment
+                select case(p4%elem%ealg(j,i))
+                case (0)
+                   do k = 2, Xh%lx - 1, 1
+                      this%dof(k, iy*(Xh%ly - 1) + 1, iz*(Xh%lz - 1) + 1, i) = edge_id
+                      this%shared_dof(k, iy*(Xh%ly - 1) + 1, iz*(Xh%lz - 1) + 1, i) = shared_dof
+                      edge_id = edge_id + 1
+                   end do
+                case (1)
+                   do k = Xh%lx - 1, 2, -1
+                      this%dof(k, iy*(Xh%ly - 1) + 1, iz*(Xh%lz - 1) + 1, i) = edge_id
+                      this%shared_dof(k, iy*(Xh%ly - 1) + 1, iz*(Xh%lz - 1) + 1, i) = shared_dof
+                      edge_id = edge_id + 1
+                   end do
+                case default
+                   call neko_error('Invalid r-edge orientation')
+                end select
+             end do
+
+             ! Edges along s-direction
+             do j = 5, 8
+                ix = mod(j - 1 ,2)
+                iz = (j - 5)/2
+                shared_dof = msh%ddata%shared_edge%element(p4%elem%edge%lmap(j,i))
+                global_id = p4%elem%edge%lgidx(p4%elem%edge%lmap(j,i))
+                edge_id = edge_offset + int((global_id - 1), i8) * num_dofs_edges(1)
+                ! check aligment
+                select case(p4%elem%ealg(j,i))
+                case (0)
+                   do k = 2, Xh%ly - 1, 1
+                      this%dof(ix*(Xh%lx - 1) + 1, k, iz*(Xh%lz - 1) + 1, i) = edge_id
+                      this%shared_dof(ix*(Xh%lx - 1) + 1, k, iz*(Xh%lz - 1) + 1, i) = shared_dof
+                      edge_id = edge_id + 1
+                   end do
+                case (1)
+                   do k = Xh%ly - 1, 2, -1
+                      this%dof(ix*(Xh%lx - 1) + 1, k, iz*(Xh%lz - 1) + 1, i) = edge_id
+                      this%shared_dof(ix*(Xh%lx - 1) + 1, k, iz*(Xh%lz - 1) + 1, i) = shared_dof
+                      edge_id = edge_id + 1
+                   end do
+                case default
+                   call neko_error('Invalid s-edge orientation')
+                end select
+             end do
+
+             ! Edges along t-direction
+             do j = 9, 12
+                ix = mod(j - 1 ,2)
+                iy = (j - 9)/2
+                shared_dof = msh%ddata%shared_edge%element(p4%elem%edge%lmap(j,i))
+                global_id = p4%elem%edge%lgidx(p4%elem%edge%lmap(j,i))
+                edge_id = edge_offset + int((global_id - 1), i8) * num_dofs_edges(1)
+                ! check aligment
+                select case(p4%elem%ealg(j,i))
+                case (0)
+                   do k = 2, Xh%lz - 1, 1
+                      this%dof(ix*(Xh%lx - 1) + 1, iy*(Xh%ly - 1) + 1, k, i) = edge_id
+                      this%shared_dof(ix*(Xh%lx - 1) + 1, iy*(Xh%ly - 1) + 1, k, i) = shared_dof
+                      edge_id = edge_id + 1
+                   end do
+                case (1)
+                   do k = Xh%lz - 1, 2, -1
+                      this%dof(ix*(Xh%lx - 1) + 1, iy*(Xh%ly - 1) + 1, k, i) = edge_id
+                      this%shared_dof(ix*(Xh%lx - 1) + 1, iy*(Xh%ly - 1) + 1, k, i) = shared_dof
+                      edge_id = edge_id + 1
+                   end do
+                case default
+                   call neko_error('Invalid t-edge orientation')
+                end select
+             end do
+          end do
+       end if
+    else
     do i = 1, msh%nelv
        
        select type(ep=>msh%elements(i)%e)
@@ -510,6 +640,7 @@ contains
        end select
        
     end do
+    end if
   end subroutine dofmap_number_edges
 
   !> Assign numbers to dofs on faces
@@ -517,7 +648,7 @@ contains
     type(dofmap_t), target :: this
     type(mesh_t), pointer :: msh
     type(space_t), pointer :: Xh    
-    integer :: i,j,k
+    integer :: i,j,k, l, ix, iy, iz
     integer :: global_id
     type(tuple4_i4_t) :: face, face_order
     integer(kind=i8) :: num_dofs_faces(3) ! #dofs for each dir (r, s, t)        
@@ -529,13 +660,84 @@ contains
 
     !> @todo don't assume lx = ly = lz
     facet_offset = int(msh%glb_mpts, i8) + &
-         int(msh%glb_meds, i8) * int(Xh%lx-2, i8) + int(1, i8)
+         int(msh%glb_meds, i8) * int(Xh%lx-2, i8) + int(1, i8) ! 1 at the end is not needed for p4est
 
     ! Number of dofs on an edge excluding end-points
     num_dofs_faces(1) =  int((Xh%ly - 2) * (Xh%lz - 2), i8)
     num_dofs_faces(2) =  int((Xh%lx - 2) * (Xh%lz - 2), i8)
     num_dofs_faces(3) =  int((Xh%lx - 2) * (Xh%ly - 2), i8)
 
+    if (p4%initialised) then
+       if (msh%gdim .eq. 2) then
+          call neko_error('2D dof face not supported yet.')
+       else
+          do i = 1, msh%nelv
+             ! Number facets in r-direction (s, t)-plane
+             do j = 1, 2
+                ix = mod(j - 1 ,2)
+                shared_dof = msh%ddata%shared_facet%element(p4%elem%face%lmap(j,i))
+                global_id = p4%elem%face%lgidx(p4%elem%face%lmap(j,i))
+                facet_id = facet_offset + int((global_id - 1), i8) * num_dofs_faces(1)
+                ! THIS IS JUST FOR NOW
+                select case(p4%elem%falg(j,i))
+                case(0)
+                   do l = 2, Xh%lz - 1
+                      do k = 2, Xh%ly - 1
+                         this%dof(ix*(Xh%lx - 1) + 1, k, l, i) = facet_id + k - 1 + &
+                              & (l - 2)*(Xh%ly - 2)
+                         this%shared_dof(ix*(Xh%lx - 1) + 1, k, l, i) = shared_dof
+                      end do
+                   end do
+                case default
+                   call neko_error('Invalid r-edge orientation; just this test')
+                end select
+             end do
+
+             ! Number facets in s-direction (r, t)-plane
+             do j = 3, 4
+                iy = mod(j - 1 ,2)
+                shared_dof = msh%ddata%shared_facet%element(p4%elem%face%lmap(j,i))
+                global_id = p4%elem%face%lgidx(p4%elem%face%lmap(j,i))
+                facet_id = facet_offset + int((global_id - 1), i8) * num_dofs_faces(1)
+                ! THIS IS JUST FOR NOW
+                select case(p4%elem%falg(j,i))
+                case(0)
+                   do l = 2, Xh%lz -1
+                      do k = 2, Xh%lx - 1
+                         this%dof(k, iy*(Xh%ly - 1) + 1, l, i) = facet_id + k - 1 + &
+                              & (l - 2)*(Xh%lx - 2)
+                         this%shared_dof(k, iy*(Xh%ly - 1) + 1, l, i) = shared_dof
+                      end do
+                   end do
+                case default
+                   call neko_error('Invalid s-edge orientation; just this test')
+                end select
+             end do
+
+             ! Number facets in t-direction (r, s)-plane
+             do j = 5, 6
+                iz = mod(j - 1 ,2)
+                shared_dof = msh%ddata%shared_facet%element(p4%elem%face%lmap(j,i))
+                global_id = p4%elem%face%lgidx(p4%elem%face%lmap(j,i))
+                facet_id = facet_offset + int((global_id - 1), i8) * num_dofs_faces(1)
+                ! THIS IS JUST FOR NOW
+                select case(p4%elem%falg(j,i))
+                case(0)
+                   do l = 2, Xh%ly -1
+                      do k = 2, Xh%lx - 1
+                         this%dof(k, l, iz*(Xh%lz - 1) + 1, i) = facet_id + k - 1 + &
+                              & (l - 2)*(Xh%lx - 2)
+                         this%shared_dof(k, l, iz*(Xh%lz - 1) + 1, i) = shared_dof
+                      end do
+                   end do
+                case default
+                   call neko_error('Invalid s-edge orientation; just this test')
+                end select
+             end do
+             
+          end do
+       end if
+    else
     do i = 1, msh%nelv
        
        !
@@ -627,6 +829,7 @@ contains
           end do
        end do
     end do
+    end if
 
   end subroutine dofmap_number_faces
 

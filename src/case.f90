@@ -54,6 +54,7 @@ module case
   use logger
   use jobctrl
   use p4est
+  use amr
   use user_intf  
   implicit none
 
@@ -150,20 +151,17 @@ contains
        ! for now everyhing is done assuming p4est to be a mesh mamager
        call p4_init(mesh_file)
 
+       ! import mesh
+       call p4_msh_get(C%msh)
+
        testing : block
-         type(mesh_t) :: tesing_msh
-         call p4_msh_get(tesing_msh)
+         call amr_refine_all(C%msh)
        end block testing
 
     else
        msh_file = file_t(trim(mesh_file))
        call msh_file%read(C%msh)
     end if
-
-    ! just for now
-    msh_file = file_t(trim(mesh_file))
-    call msh_file%read(C%msh)
-    ! just for now
 
     C%params = params%p
 
