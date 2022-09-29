@@ -15,7 +15,7 @@ module p4est
   implicit none
 
   private
-  public :: p4_mesh_restr_t, p4_init, p4_finalize, p4_msh_get, p4_refine, p4
+  public :: p4_msh_rcn_t, p4_init, p4_finalize, p4_msh_get, p4_refine, p4
 
   ! Following node types contain geometrical and conectivity information for the mesh
   ! Type for independent nodes
@@ -251,12 +251,23 @@ module p4est
      type(p4_element_t) :: elem
   end type p4_mesh_import_t
 
-  ! type for element restructure
-  type p4_mesh_restr_t
+  ! type for element reconstruction
+  type p4_msh_rcn_t
+     ! arrays to store global element re-mapping to perform refinement on nek5000 side
+     ! map_nr - local number of unchanged elements
+     ! rfn_nr - local number of refined elements
+     ! AMR_RFN_NR_S - local number of elements to be send; including refined ones
+     ! crs_nr - local number of coarsened elements
+     ! AMR_CRS_NR_S - local number of elements to be send for coarsening
+     ! elgl_map - element number/process id mapping data for unchanged elements (old gl. num., old loc. num., old proc. id)
+     ! elgl_rfn - element number/process id mapping data for refined elements (ch. gl. num., old p. gl. num., old p. loc. num., old p. proc. id, ch. pos.)
+     ! elgl_crs - element number/process id mapping data for coarsened elements (new gl. num., old ch. gl. num., old ch. loc. num., old ch. proc. id)
      integer(i4) :: map_nr, rfn_nr, crs_nr
      integer(i4), allocatable, dimension(:, :) :: elgl_map, elgl_rfn
-    integer(i4), allocatable, dimension(:, :, :) :: elgl_crs
-  end type p4_mesh_restr_t
+     integer(i4), allocatable, dimension(:, :, :) :: elgl_crs
+   contains
+     procedure, public, pass(this) :: free => p4_msh_rcn_free
+  end type p4_msh_rcn_t
 
   ! connectivity parameter arrays
   ! face vertices
@@ -686,12 +697,12 @@ contains
   end subroutine p4_msh_get
 
   !> perform refinement based on refinement flag
-  subroutine p4_refine(ref_mark, level_max, ifmod, msh_rstr)
+  subroutine p4_refine(ref_mark, level_max, ifmod, msh_rcn)
     ! argument list
     integer(i4), dimension(:), intent(in) :: ref_mark
     integer(i4), intent(in) :: level_max
     logical, intent(out) :: ifmod
-    type(p4_mesh_restr_t), intent(out) :: msh_rstr
+    type(p4_msh_rcn_t), intent(out) :: msh_rcn
     ! local variables
     integer(i4) :: il, itmp
     integer(i4), target, allocatable, dimension(:) :: lref_mark, el_gnum, el_lnum, el_nid
@@ -735,6 +746,8 @@ contains
     call wp4est_refine(level_max)
     call wp4est_coarsen()
     call wp4est_balance()
+    ! perform partitioning on p4est side
+    call wp4est_part(1)
     call wp4est_tree_check(itmp, p4test)
 
     if (itmp == 0 ) then
@@ -752,12 +765,12 @@ contains
        call wp4est_msh_get_hst(map_nr, rfn_nr, crs_nr, c_loc(elgl_map), &
             & c_loc(elgl_rfn), c_loc(elgl_crs))
        ! move data
-       msh_rstr%map_nr = map_nr
-       msh_rstr%rfn_nr = rfn_nr
-       msh_rstr%crs_nr = crs_nr
-       call MOVE_ALLOC(elgl_map, msh_rstr%elgl_map)
-       call MOVE_ALLOC(elgl_rfn, msh_rstr%elgl_rfn)
-       call MOVE_ALLOC(elgl_crs, msh_rstr%elgl_crs)
+       msh_rcn%map_nr = map_nr
+       msh_rcn%rfn_nr = rfn_nr
+       msh_rcn%crs_nr = crs_nr
+       call MOVE_ALLOC(elgl_map, msh_rcn%elgl_map)
+       call MOVE_ALLOC(elgl_rfn, msh_rcn%elgl_rfn)
+       call MOVE_ALLOC(elgl_crs, msh_rcn%elgl_crs)
     end if
 
     ! free memory
@@ -821,6 +834,21 @@ contains
 
     return
   end subroutine p4_mesh_import_free
+
+  subroutine p4_msh_rcn_free(this)
+    ! argument list
+    class(p4_msh_rcn_t), intent(inout) :: this
+
+    ! Deallocate arrays
+    if (allocated(this%elgl_map)) deallocate(this%elgl_map)
+    if (allocated(this%elgl_rfn)) deallocate(this%elgl_rfn)
+    if (allocated(this%elgl_crs)) deallocate(this%elgl_crs)
+    this%map_nr = 0
+    this%rfn_nr = 0
+    this%rfn_nr = 0
+
+    return
+  end subroutine p4_msh_rcn_free
 
   subroutine p4_mesh_import_data(p4)
     ! argument list
@@ -1966,8 +1994,11 @@ contains
     return
   end subroutine p4_msh_get
 
-  subroutine p4_refine(ref_mark)
-    integer(i4), dimension(:), intent(inout) :: refmark
+  subroutine p4_refine(ref_mark, level_max, ifmod, msh_rcn)
+    integer(i4), dimension(:), intent(in) :: ref_mark
+    integer(i4), intent(in) :: level_max
+    logical, intent(out) :: ifmod
+    type(p4_msh_rcs_t), intent(out) :: msh_rcn
 
     call neko_error('NEKO needs to be built with P4EST support')
     return

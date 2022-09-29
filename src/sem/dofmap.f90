@@ -68,6 +68,7 @@ module dofmap
 
    contains
      procedure, pass(this) :: size => dofmap_size
+     procedure, pass(this) :: resize => dofmap_resize ! for amr refinement/coarsening
 !     final :: dofmap_free
   end type dofmap_t
 
@@ -218,6 +219,15 @@ contains
     integer :: res
     res = this%n_dofs
   end function dofmap_size
+
+  !> Perform AMR refinement/coarsening
+  subroutine dofmap_resize(this)
+    class(dofmap_t), intent(inout) :: this
+
+    call neko_error('Nothing done yet yet.')
+
+    return
+  end subroutine dofmap_resize
 
   !> Assign numbers to each dofs on points
   subroutine dofmap_number_points(this)

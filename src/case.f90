@@ -154,9 +154,9 @@ contains
        ! import mesh
        call p4_msh_get(C%msh)
 
-       testing : block
-         call amr_refine_all(C%msh)
-       end block testing
+!       testing1 : block
+!         call amr_refine_all(C%msh)
+!       end block testing1
 
     else
        msh_file = file_t(trim(mesh_file))
@@ -187,6 +187,12 @@ contains
     !
     call fluid_scheme_factory(C%fluid, trim(fluid_scheme))
     call C%fluid%init(C%msh, lx, C%params)
+
+    testing2 : block
+      call amr_rcn_init(C%msh, C%fluid%Xh)
+      write(*,*) 'TEST int init', pe_rank
+      call amr_refine_all(C%msh,C%fluid)
+    end block testing2
 
     !
     ! Setup user defined conditions    
