@@ -1529,12 +1529,12 @@ contains
              call ep%init(itmp, &
                   & msh%points(p4%elem%vnmap(1, il)), &
                   & msh%points(p4%elem%vnmap(2, il)), &
-                  & msh%points(p4%elem%vnmap(4, il)), & ! swapped
                   & msh%points(p4%elem%vnmap(3, il)), & ! swapped
+                  & msh%points(p4%elem%vnmap(4, il)), & ! swapped
                   & msh%points(p4%elem%vnmap(5, il)), &
                   & msh%points(p4%elem%vnmap(6, il)), &
-                  & msh%points(p4%elem%vnmap(8, il)), & ! swapped
-                  & msh%points(p4%elem%vnmap(7, il))) ! swapped
+                  & msh%points(p4%elem%vnmap(7, il)), & ! swapped
+                  & msh%points(p4%elem%vnmap(8, il))) ! swapped
           class default
              call neko_error('Invalid element type')
           end select
