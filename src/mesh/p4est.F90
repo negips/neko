@@ -1163,7 +1163,7 @@ contains
     integer(i4) :: felnum, felown, fenrank, fenshare
     integer(i8) :: feloff
     integer(i4), allocatable, target, dimension(:,:) :: felmap ! global index of element faces and edges
-    integer(i4), allocatable, target, dimension(:) :: felrank, feloffs, felshare
+    integer(i4), allocatable, target, dimension(:) :: felrank, feloffs, felshare, feind
     integer(i8), allocatable, target, dimension(:) :: felgidx
     integer(i4), allocatable, dimension(:) :: esort, eind, eoffset ! sorting arrays for edges
     integer(i4), allocatable, dimension(:) :: eloffs
@@ -1180,7 +1180,7 @@ contains
          call wp4est_elm_get_lnode(felnum, felown, feloff, c_loc(felmap))
          call wp4est_sharers_get_size(fenrank, fenshare)
          allocate(felgidx(felnum), felrank(fenrank), feloffs(fenrank+1), &
-              & felshare(fenshare))
+              & felshare(fenshare), feind(fenshare))
          call wp4est_sharers_get_ind(c_loc(felgidx), c_loc(felrank), c_loc(feloffs), &
               & c_loc(felshare))
          call wp4est_lnodes_del()
@@ -1232,6 +1232,14 @@ contains
          fenshare = 1
          eloffs(1) = fenshare
          do il=1, fenrank ! mpi rank loop
+            ! unfortunately the list of the shared nodes on a local rank seems to be
+            ! a concatenated list rahter than a sorted one;
+            ! that is why for a local rank perform sorting
+            if (felrank(il) == pe_rank) then
+               itmp = feloffs(il + 1) - feloffs(il)
+               call sorti4(felshare(feloffs(il):feloffs(il + 1) - 1), &
+                    & feind(feloffs(il):feloffs(il + 1) - 1), itmp)
+            end if
             jl = feloffs(il)
             kl = 1
             do
@@ -1399,8 +1407,8 @@ contains
             end do
          end do
 
-         deallocate(felmap, felgidx, felrank, feloffs, felshare, esort, eind, &
-              & eoffset, eloffs)
+         deallocate(felmap, felgidx, felrank, feloffs, felshare, feind, &
+              & esort, eind, eoffset, eloffs)
          deallocate(rbuf, sbuf, request, status)
        end associate
     end if

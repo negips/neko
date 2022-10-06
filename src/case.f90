@@ -188,11 +188,62 @@ contains
     call fluid_scheme_factory(C%fluid, trim(fluid_scheme))
     call C%fluid%init(C%msh, lx, C%params)
 
-    testing2 : block
-      call amr_rcn_init(C%msh, C%fluid%Xh)
-      write(*,*) 'TEST int init', pe_rank
-      call amr_refine_all(C%msh,C%fluid)
-    end block testing2
+!    testing2 : block
+!      call amr_rcn_init(C%msh, C%fluid%Xh)
+!      write(*,*) 'TEST int init', pe_rank
+!      call amr_refine_all(C%msh,C%fluid)
+!    end block testing2
+
+!!$    testing_gs : block
+!!$      use gs_ops
+!!$      use gather_scatter
+!!$      integer :: il, jl, kl, ll, ierr, iunit
+!!$      character(len=2) :: pe_sid
+!!$      call MPI_Barrier(NEKO_COMM, ierr)
+!!$      ! testing gs
+!!$      C%fluid%u%x(:,:,:,:) = 1.0
+!!$      call gs_op(C%fluid%gs_Xh, C%fluid%u, GS_OP_ADD)
+!!$      C%fluid%v%x(:,:,:,:) = C%fluid%dm_Xh%dof(:,:,:,:)
+!!$      call gs_op(C%fluid%gs_Xh, C%fluid%v, GS_OP_ADD)
+!!$      C%fluid%v%x(:,:,:,:) = C%fluid%v%x(:,:,:,:)/C%fluid%u%x(:,:,:,:)
+!!$      write(pe_sid, '(i2.2)') pe_rank
+!!$      open(newunit=iunit,file='testgs'//pe_sid//'.txt')
+!!$      write(iunit,*) 'TEST',pe_rank,C%msh%nelv
+!!$      write(iunit,*) '  '
+!!$      write(iunit,*) 'DOF test'
+!!$      write(iunit,*) '  '
+!!$      do il = 1, C%msh%nelv
+!!$         do ll = 1, C%fluid%Xh%lz
+!!$            do kl = 1, C%fluid%Xh%ly
+!!$               write(iunit,'(3i4,4x,8f8.3)') il, ll, kl, &
+!!$                    & (C%fluid%v%x(jl,kl,ll,il)-C%fluid%dm_Xh%dof(jl,kl,ll,il),jl=1,C%fluid%Xh%lx)
+!!$            end do
+!!$            write(iunit,*) '  '
+!!$         end do
+!!$         write(iunit,*) '======================================='
+!!$      end do
+!!$      write(iunit,*) '  '
+!!$      write(iunit,*) 'COORDINATES test'
+!!$      write(iunit,*) '  '
+!!$      do il = 1, C%msh%nelv
+!!$         do ll = 1, C%fluid%Xh%lz
+!!$            do kl = 1, C%fluid%Xh%ly
+!!$               write(iunit,'(a,3i4,2x,8f9.5)') 'x',il, ll, kl, &
+!!$                    & (C%fluid%dm_Xh%x(jl,kl,ll,il),jl=1,C%fluid%Xh%lx)
+!!$               write(iunit,'(a,3i4,2x,8f9.5)') 'y',il, ll, kl, &
+!!$                    & (C%fluid%dm_Xh%y(jl,kl,ll,il),jl=1,C%fluid%Xh%lx)
+!!$               write(iunit,'(a,3i4,2x,8f9.5)') 'z',il, ll, kl, &
+!!$                    & (C%fluid%dm_Xh%z(jl,kl,ll,il),jl=1,C%fluid%Xh%lx)
+!!$               write(iunit,*) '  '
+!!$            end do
+!!$            write(iunit,*) '-----------------------------------------'
+!!$         end do
+!!$         write(iunit,*) '======================================='
+!!$      end do
+!!$      close(iunit)
+!!$      call MPI_Barrier(NEKO_COMM, ierr)
+!!$      call neko_error('This is not error.')
+!!$    end block testing_gs
 
     !
     ! Setup user defined conditions    

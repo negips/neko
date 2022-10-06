@@ -19,9 +19,9 @@ module amr
   ! type for fields reconstruction (refinement/transfer/coarsening)
   type amr_rcn_t
      ! mesh
-     type(mesh_t), pointer :: msh
+     type(mesh_t), pointer :: msh => null()
      ! function space
-     type(space_t), pointer :: Xh
+     type(space_t), pointer :: Xh => null()
 
      ! interpolation operators
      ! coarse to fine
@@ -153,7 +153,7 @@ contains
     end do
 
     ! z-direction; IS THIS CORRECT? SHOULD I ALLOCATE THEM ANYHOW AND FILL WITH 1?
-    if (Xh%lz > 1) then
+    if (msh%gdim == 3) then
        allocate(amr_rcn%z_cr_to_fn(Xh%lz, Xh%lz, 2), amr_rcn%z_cr_to_fnT(Xh%lz, Xh%lz, 2), &
             & amr_rcn%z_fn_to_cr(Xh%lz, Xh%lz, 2), amr_rcn%z_fn_to_crT(Xh%lz, Xh%lz, 2))
        amr_rcn%z_cr_to_fn(:,:,:) = 0.0_dp
@@ -225,7 +225,7 @@ contains
     end if
 
     ! Z
-    if (Xh%lz > 1) then
+    if (msh%gdim == 3) then
        if (mod(Xh%lz, 2) == 1) then
           kl = Xh%lz/2 + 1
           do jl = 1, Xh%ly
@@ -277,6 +277,8 @@ contains
     ! argument list
     type(amr_rcn_t), intent(inout) :: ref
 
+    NULLIFY(ref%msh, ref%Xh)
+
     if (allocated(ref%x_cr_to_fn)) deallocate(ref%x_cr_to_fn)
     if (allocated(ref%x_cr_to_fnT)) deallocate(ref%x_cr_to_fnT)
     if (allocated(ref%x_fn_to_cr)) deallocate(ref%x_fn_to_cr)
@@ -317,7 +319,7 @@ contains
     ! local variables
     integer(i4) :: iz
 
-    if (ref%Xh%lz > 1) then ! 3D
+    if (ref%msh%gdim == 3) then ! 3D
        call mxm(ref%x_cr_to_fn(:,:, ch_pos(1)), ref%Xh%lx, vc, &
             & ref%Xh%lx, ref%tmp(:,:,:, 1), ref%Xh%lyz)
        do iz = 1, ref%Xh%lz
@@ -350,7 +352,7 @@ contains
     ! local variables
     integer(i4) :: iz
 
-    if (ref%Xh%lz > 1) then ! 3D
+    if (ref%msh%gdim == 3) then ! 3D
        call mxm(ref%x_fn_to_cr(:,:, ch_pos(1)), ref%Xh%lx, vf, &
             & ref%Xh%lx, ref%tmp(:,:,:, 1), ref%Xh%lyz)
        do iz = 1, ref%Xh%lz

@@ -116,31 +116,6 @@ contains
        call dofmap_number_edges(this)
     end if
 
-!!$    testing : block
-!!$      integer :: il, jl, kl, ll, ierr, iunit
-!!$      character(len=2) :: pe_sid
-!!$      call MPI_Barrier(NEKO_COMM, ierr)
-!!$      write(pe_sid, '(i2.2)') pe_rank
-!!$      open(newunit=iunit,file='test'//pe_sid//'.txt')
-!!$      write(iunit,*) 'TEST',pe_rank,msh%mpts,msh%glb_mpts, &
-!!$           &msh%mfcs,msh%glb_mfcs,msh%meds,msh%glb_meds ,Xh%lx
-!!$      write(iunit,*) '  '
-!!$      do il = 1, msh%nelv
-!!$         do ll = 1, Xh%lz
-!!$            do kl = 1, Xh%ly
-!!$               write(iunit,'(12i7,4x,8l)') pe_rank,msh%offset_el + il, kl, ll, &
-!!$                    & (this%dof(jl,kl,ll,il),jl=1,Xh%lx), &
-!!$                    & (this%shared_dof(jl,kl,ll,il),jl=1,Xh%lx)
-!!$            end do
-!!$            write(iunit,*) '  '
-!!$         end do
-!!$         write(iunit,*) '======================================='
-!!$      end do
-!!$      close(iunit)
-!!$      call MPI_Barrier(NEKO_COMM, ierr)
-!!$      call neko_error('This is not error.')
-!!$    end block testing
-
     !
     ! Generate x,y,z-coordinates for all dofs
     !
@@ -166,7 +141,50 @@ contains
        call device_memcpy(this%y, this%y_d, this%n_dofs, HOST_TO_DEVICE)
        call device_memcpy(this%z, this%z_d, this%n_dofs, HOST_TO_DEVICE)
     end if
-    
+
+!!$    testing : block
+!!$      integer :: il, jl, kl, ll, ierr, iunit
+!!$      character(len=2) :: pe_sid
+!!$      call MPI_Barrier(NEKO_COMM, ierr)
+!!$      write(pe_sid, '(i2.2)') pe_rank
+!!$      open(newunit=iunit,file='dofmap'//pe_sid//'.txt')
+!!$      write(iunit,*) 'TEST',pe_rank,msh%mpts,msh%glb_mpts, &
+!!$           &msh%mfcs,msh%glb_mfcs,msh%meds,msh%glb_meds ,Xh%lx
+!!$      write(iunit,*) '  '
+!!$      do il = 1, msh%nelv
+!!$         do ll = 1, Xh%lz
+!!$            do kl = 1, Xh%ly
+!!$               write(iunit,'(13i7,4x,8l)') pe_rank,msh%offset_el + il, il, ll, kl, &
+!!$                    & (this%dof(jl,kl,ll,il),jl=1,Xh%lx), &
+!!$                    & (this%shared_dof(jl,kl,ll,il),jl=1,Xh%lx)
+!!$            end do
+!!$            write(iunit,*) '  '
+!!$         end do
+!!$         write(iunit,*) '======================================='
+!!$      end do
+!!$      write(iunit,*) '  '
+!!$      write(iunit,*) 'COORDINATES test'
+!!$      write(iunit,*) '  '
+!!$      do il = 1, msh%nelv
+!!$         do ll = 1, Xh%lz
+!!$            do kl = 1, Xh%ly
+!!$               write(iunit,'(a,3i4,2x,8f9.5)') 'x',il, ll, kl, &
+!!$                    & (this%x(jl,kl,ll,il),jl=1,Xh%lx)
+!!$               write(iunit,'(a,3i4,2x,8f9.5)') 'y',il, ll, kl, &
+!!$                    & (this%y(jl,kl,ll,il),jl=1,Xh%lx)
+!!$               write(iunit,'(a,3i4,2x,8f9.5)') 'z',il, ll, kl, &
+!!$                    & (this%z(jl,kl,ll,il),jl=1,Xh%lx)
+!!$               write(iunit,*) '  '
+!!$            end do
+!!$            write(iunit,*) '-----------------------------------------'
+!!$         end do
+!!$         write(iunit,*) '======================================='
+!!$      end do
+!!$      close(iunit)
+!!$      call MPI_Barrier(NEKO_COMM, ierr)
+!!$      call neko_error('This is not error.')
+!!$    end block testing
+
   end function dofmap_init
 
   !> Deallocate the dofmap
@@ -232,7 +250,7 @@ contains
   !> Assign numbers to each dofs on points
   subroutine dofmap_number_points(this)
     type(dofmap_t), target :: this
-    integer :: il ,jl, nvert, ix, iy, iz
+    integer :: il ,jl, ix, iy, iz
     type(mesh_t), pointer :: msh
     type(space_t), pointer :: Xh
 
@@ -242,9 +260,8 @@ contains
        if (msh%gdim .eq. 2) then
           call neko_error('2D dof point not supported yet.')
        else
-          nvert = 2**p4%dim
           do il = 1, msh%nelv
-             do jl = 1, nvert
+             do jl = 1, msh%npts
                 ix = mod(jl -1 ,2)
                 iy = mod(jl -1 ,4)/2
                 iz = (jl - 1)/4
@@ -613,8 +630,7 @@ contains
 
     !> @todo don't assume lx = ly = lz
     facet_offset = int(msh%glb_mpts, i8) + &
-         int(msh%glb_meds, i8) * int(Xh%lx-2, i8) + int(1, i8) ! 1 at the end is not needed for p4est
-
+         int(msh%glb_meds, i8) * int(Xh%lx-2, i8) + int(1, i8)
     ! Number of dofs on an edge excluding end-points
     num_dofs_faces(1) =  int((Xh%ly - 2) * (Xh%lz - 2), i8)
     num_dofs_faces(2) =  int((Xh%lx - 2) * (Xh%lz - 2), i8)
@@ -636,7 +652,7 @@ contains
                 case(0)
                    do l = 2, Xh%lz - 1
                       do k = 2, Xh%ly - 1
-                         this%dof(ix*(Xh%lx - 1) + 1, k, l, i) = facet_id + k - 1 + &
+                         this%dof(ix*(Xh%lx - 1) + 1, k, l, i) = facet_id + k - 2 + &
                               & (l - 2)*(Xh%ly - 2)
                          this%shared_dof(ix*(Xh%lx - 1) + 1, k, l, i) = shared_dof
                       end do
@@ -657,7 +673,7 @@ contains
                 case(0)
                    do l = 2, Xh%lz -1
                       do k = 2, Xh%lx - 1
-                         this%dof(k, iy*(Xh%ly - 1) + 1, l, i) = facet_id + k - 1 + &
+                         this%dof(k, iy*(Xh%ly - 1) + 1, l, i) = facet_id + k - 2 + &
                               & (l - 2)*(Xh%lx - 2)
                          this%shared_dof(k, iy*(Xh%ly - 1) + 1, l, i) = shared_dof
                       end do
@@ -678,7 +694,7 @@ contains
                 case(0)
                    do l = 2, Xh%ly -1
                       do k = 2, Xh%lx - 1
-                         this%dof(k, l, iz*(Xh%lz - 1) + 1, i) = facet_id + k - 1 + &
+                         this%dof(k, l, iz*(Xh%lz - 1) + 1, i) = facet_id + k - 2 + &
                               & (l - 2)*(Xh%lx - 2)
                          this%shared_dof(k, l, iz*(Xh%lz - 1) + 1, i) = shared_dof
                       end do
