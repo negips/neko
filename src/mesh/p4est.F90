@@ -1939,6 +1939,7 @@ contains
        call msh%labeled_zones(il)%init(msh%nelv)
     end do
 
+    ! I consider periodic and labeled bc only
     !! @todo periodic bc for p4est
     ! There is inconsistency here, as I treat bc differently than neko.
     ! PLACE FOR DISCUSSION; I HAVE TO CHECK WHAT GMSH DOES WITH BC
@@ -1955,21 +1956,8 @@ contains
              call mesh_mark_periodic_facet(msh, if, ie, p_f, p_e, pt_id)
              ! There is no need to call mesh apply, as I do not stick to
              ! node numberring anyhow.
-          case(1)
-             call mesh_mark_wall_facet(msh, if, ie)
-          case(2)
-             call mesh_mark_inlet_facet(msh, if, ie)
-          case(3)
-             call mesh_mark_outlet_facet(msh, if, ie)
-          case(4)
-             call mesh_mark_sympln_facet(msh, if, ie)
-          case(5)
-             ! neko periodic set in case -1
-          case(6)
-             call mesh_mark_outlet_normal_facet(msh, if, ie)
-          case(7)
-             ! itmp is a label, but I have no such data on p4est side right now
-             itmp = 2 ! this is just a hack !!!!!!!!!!!!!!!!!!!!!!!!!
+          case (1:NEKO_MSH_MAX_ZLBLS) ! everything elese marked as labeled bc
+             itmp = p4%elem%bc(jl,il) ! once again problem with inout attributre
              call mesh_mark_labeled_facet(msh, if, ie, itmp)
           end select
        end do
