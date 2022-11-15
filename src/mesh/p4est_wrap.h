@@ -318,11 +318,11 @@ void wp4est_tree_check(int * check, int quad_data)
 void wp4est_refm_put(int * ref_mark)
 ;
 
-/** Fill element global mapping in p4est block
+/** Fill element neko element distribution in p4est block
  *
- * @param el_gnum   element global mapping array
- * @param el_lnum   element global mapping array
- * @param el_nid   element global mapping array
+ * @param el_gnum   element global number (neko distribution)
+ * @param el_lnum   element local number (neko distribution)
+ * @param el_nid   element mpi rank (neko distribution)
  */
 void wp4est_egmap_put(int * el_gnum,int * el_lnum,int * el_nid)
 ;

@@ -153,17 +153,31 @@ contains
 
        ! import mesh
        call p4_msh_get(C%msh)
-
-!       testing1 : block
-!         call amr_refine_all(C%msh)
-!       end block testing1
-
     else
        msh_file = file_t(trim(mesh_file))
        call msh_file%read(C%msh)
     end if
 
     C%params = params%p
+
+    ! pre-refine the mesh before starting fluid
+    ! this should be done for fresh run only (no restart)
+    if (amr) then
+       prerefine : block
+         ! for now just testing
+         integer(i4), allocatable, dimension(:) :: ref_mark
+         allocate(ref_mark(C%msh%nelv))
+         ! mark all the elements to be refined
+         ref_mark(:) = 1 ! THIS VALUE SHOULD BE TAKEN FORM p4est_wrap.h
+         call amr_refine(C%msh, C%params, ref_mark)
+         deallocate(ref_mark)
+         allocate(ref_mark(C%msh%nelv))
+         ! mark all the elements to be coarsened
+         ref_mark(:) = -1 ! THIS VALUE SHOULD BE TAKEN FORM p4est_wrap.h
+         call amr_refine(C%msh, C%params, ref_mark)
+         deallocate(ref_mark)
+       end block prerefine
+    end if
 
     !
     ! Load Balancing
@@ -188,11 +202,20 @@ contains
     call fluid_scheme_factory(C%fluid, trim(fluid_scheme))
     call C%fluid%init(C%msh, lx, C%params)
 
-!    testing2 : block
-!      call amr_rcn_init(C%msh, C%fluid%Xh)
-!      write(*,*) 'TEST int init', pe_rank
-!      call amr_refine_all(C%msh,C%fluid)
-!    end block testing2
+!!$    testing_refine : block
+!!$      ! for now just testing
+!!$      integer(i4), allocatable, dimension(:) :: ref_mark
+!!$      ! initialise restructure data
+!!$      call amr_rcn_init(C%msh, C%fluid%Xh)
+!!$      write(*,*) 'TEST int init', pe_rank
+!!$      ! perform refinement
+!!$      allocate(ref_mark(C%msh%nelv))
+!!$      ! mark all the elements to be refined
+!!$      ref_mark(:) = 1 ! THIS VALUE SHOULD BE TAKEN FORM p4est_wrap.h
+!!$      ! refine filed
+!!$      call amr_refine(C%msh, C%fluid, C%params, ref_mark)
+!!$      deallocate(ref_mark)
+!!$    end block testing_refine
 
 !!$    testing_gs : block
 !!$      use gs_ops

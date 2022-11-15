@@ -3,6 +3,7 @@ module amr
   use num_types
   use comm
   use logger
+  use parameters
   use mxm_wrapper
   use speclib
   use p4est
@@ -14,7 +15,7 @@ module amr
   implicit none
 
   private
-  public :: amr_refine_all, amr_rcn_init, amr_rcn_free
+  public :: amr_refine, amr_rcn_init, amr_rcn_free
 
   ! type for fields reconstruction (refinement/transfer/coarsening)
   type amr_rcn_t
@@ -41,6 +42,9 @@ module amr
      ! edge
      real(dp), allocatable, dimension(:) :: ed_mult
 
+     ! p4est <=> neko distribution mapping
+     type(p4_msh_trs_t) :: msh_trs
+
      ! element reconstruction data
      type(p4_msh_rcn_t) :: msh_rcn
 
@@ -50,9 +54,9 @@ module amr
 
   type(amr_rcn_t), save :: amr_rcn
 
-  interface amr_refine_all
-     module procedure amr_msh_refine_all, amr_fluid_refine_all
-  end interface amr_refine_all
+  interface amr_refine
+     module procedure amr_msh_refine, amr_fluid_refine
+  end interface amr_refine
 
 contains
 
@@ -298,6 +302,7 @@ contains
     if (allocated(ref%fc_mult)) deallocate(ref%fc_mult)
     if (allocated(ref%ed_mult)) deallocate(ref%ed_mult)
 
+    call ref%msh_trs%free()
     call ref%msh_rcn%free()
 
     if (allocated(ref%tmp)) deallocate(ref%tmp)
@@ -514,117 +519,223 @@ contains
   end subroutine amr_rcn_refine_coarsen_single
 
   !> Refine all elements in the mesh
-  subroutine amr_msh_refine_all(msh)
+  subroutine amr_msh_refine(msh, param, ref_mark)
     ! argument list
     type(mesh_t), intent(inout) :: msh
+    type(param_t), intent(in) :: param
+    integer(i4), dimension(:), intent(inout) :: ref_mark
     ! local variables
-    integer(i4), allocatable, dimension(:) :: ref_mark
-    integer(i4) :: nelvo, level_max, il, jl, ielo, itmp, ips, ich
+    integer(i4) :: level_max, il, jl, ielo, itmp, ips, ich
     integer(i4) :: ierr, gnum, goff
     logical :: ifmod
+    integer(i4), dimension(5,8) :: itmpv
+    integer(i4), allocatable, dimension(:) :: el_gidx
     integer(i4), allocatable, dimension(:,:) :: lel_map
 
     call neko_log%section("Mesh refinement")
+    ! sanity check
+    if(msh%nelv /= size(ref_mark)) call neko_error('Inconsistent ref_mark size')
+    ! check if any refinement is marked
+    itmp = minval(ref_mark)
+    call MPI_Allreduce(itmp, il, 1, MPI_INTEGER, MPI_MAX, NEKO_COMM, ierr)
+    itmp = maxval(ref_mark)
+    call MPI_Allreduce(itmp, jl, 1, MPI_INTEGER, MPI_MIN, NEKO_COMM, ierr)
+    if (il == 0 .and. jl == 0) then
+       call neko_log%message('No refinemnt mark set')
+       call neko_log%end_section()
+       return
+    end if
+
     ! save old number of local elements
-    nelvo = msh%nelv
-    ! mark all the elements to be refined
-    allocate(ref_mark(msh%nelv))
-    ref_mark(:) = 1 ! THIS VALUE SHOULD BE TAKEN FORM p4est_wrap.h
-    level_max = 3 ! THIS SHOULD BE TAKEN FROM RUNTIME PARAMETERS
-    call p4_refine(ref_mark, level_max, ifmod, amr_rcn%msh_rcn)
+    amr_rcn%msh_rcn%nelvo = msh%nelv
+    ! perform refinement/coarsening on p4est side
+    level_max = param%amrlmax
+    ! global elements numbers; THIS IS JUST A TEMPORARY HACK
+    allocate(el_gidx(msh%nelv))
+    do il = 1, msh%nelv
+       el_gidx(il) = msh%offset_el + il
+    end do
+    call p4_refine(ref_mark, el_gidx, amr_rcn%msh_trs, level_max, ifmod, amr_rcn%msh_rcn)
+    deallocate(el_gidx)
 
     if (ifmod)  then
        ! Import mesh from p4est to neko
        call p4_msh_get(msh)
 
-       ! PLACE FOR TRANSFER/SORTING OF MAPPING DATA DATA
-       ! THIS SHOULD BE CHANGED AFTER ADDING COMMUNICATION AS IT WOULD INCLUDE COPY
+!!$       ! PLACE FOR NEW MESH PARTITIONING
+!!$
+!!$       ! PLACE FOR TRANSFER/SORTING OF MAPPING DATA DATA
+!!$       ! THIS SHOULD BE CHANGED AFTER ADDING COMMUNICATION AS IT WOULD INCLUDE COPY
+!!$       ! collect information: old gidx, old nid, new gidx, new nid
+!!$       ! the max size of tmp arrays could be max(nelv_new,nelv_old)*children_number
+!!$       
+!!$
+!!$       ! Reshuffle data to get propper mapping on the destination rank
+!!$       ! THIS SHOULD BE CHANGED AFTER ADDING COMMUNICATION
+!!$       allocate(lel_map(3,max(msh%nelv,amr_rcn%msh_rcn%nelvo)*msh%npts)) ! at this point I do not know the proper size, so take a safe value
+!!$       lel_map(:,:) = 0
+!!$       lel_map(3,:) = -1
+!!$       do il = 1, msh%nelv ! loop witn neko distribution
+!!$          if (amr_rcn%msh_rcn%elgl_map(1,il) /= 0) then
+!!$             lel_map(1, amr_rcn%msh_rcn%elgl_map(2,il)) = msh%offset_el + il ! this is just speciffic to a test case; in general wrong
+!!$             lel_map(3, amr_rcn%msh_rcn%elgl_map(2,il)) = pe_rank ! this is just speciffic to a test case; in general wrong
+!!$          end if
+!!$       end do
+!!$       call MOVE_ALLOC(lel_map,amr_rcn%msh_rcn%elgl_map)
+!!$       ! PLACE TO UPDATE amr_rcn%msh_rcn%map_nr TO NEKO LOCAL VALUE
+!!$
+!!$       ! PLACE FOR TRANSFER/SORTING OF REFINEMENT DATA
+!!$
+!!$       ! Recalculate local position of refined element on the destination rank
+!!$       ! THIS SHOULD BE CHANGED AFTER ADDING COMMUNICATION AS IT WOULD INCLUDE COPY
+!!$       ! RIGHT NOW IT IS JUST LOCAL POSITION UPDATE
+!!$       ! SORTING IS IMPORTANT
+!!$       ! loop over refined elements
+!!$       itmp = amr_rcn%msh_rcn%nelvo
+!!$       do il = 1, amr_rcn%msh_rcn%rfn_nr, amr_rcn%msh%npts ! loop over parent owner
+!!$          ips = itmp
+!!$          ielo = amr_rcn%msh_rcn%elgl_rfn(3, il)
+!!$          ! THIS COPY IS HERE AS THERE IS NO COMMUNICATION
+!!$          itmpv(:, 1:amr_rcn%msh%npts) = &
+!!$               & amr_rcn%msh_rcn%elgl_rfn(:, il:il + amr_rcn%msh%npts - 1)
+!!$          ! loop over all the children
+!!$          do jl = 1, amr_rcn%msh%npts
+!!$             ! which child
+!!$             ich = itmpv(5, jl)
+!!$             ! local parent position sanity check
+!!$             if (itmpv(3, jl) /= ielo) &
+!!$                  & call neko_error('Children do not share parent')
+!!$             ! new local position at the end of the array
+!!$             if (ich == 0) then
+!!$                amr_rcn%msh_rcn%elgl_rfn(3, il + ich) = ielo
+!!$             else
+!!$                itmp = itmp + 1
+!!$                amr_rcn%msh_rcn%elgl_rfn(3, il + ich) = ips + ich
+!!$             end if
+!!$             ! new global element number
+!!$             amr_rcn%msh_rcn%elgl_rfn(1, il + ich) = itmpv(1, jl)
+!!$             ! parent local position in the array
+!!$             amr_rcn%msh_rcn%elgl_rfn(2, il + ich) = ielo
+!!$          end do
+!!$       end do
+!!$       ! save local number of elements after refinement
+!!$       amr_rcn%msh_rcn%rfn_nr_a = itmp
+!!$       ! PLACE TO UPDATE amr_rcn%msh_rcn%rfn_nr TO NEKO LOCAL VALUE
+!!$
+!!$       ! update global rank mapping
+!!$       do il = 1, amr_rcn%msh_rcn%rfn_nr ! loop over parent owner
+!!$          jl = amr_rcn%msh_rcn%elgl_rfn(3, il)
+!!$          if (amr_rcn%msh_rcn%elgl_map(1, jl) == 0) then
+!!$             amr_rcn%msh_rcn%elgl_map(1, jl) = amr_rcn%msh_rcn%elgl_rfn(1, il)
+!!$             amr_rcn%msh_rcn%elgl_map(3, jl) = pe_rank ! this is just speciffic to a test case; in general wrong
+!!$          else
+!!$             call neko_error('Refinement transfer index already used; refinement.')
+!!$          end if
+!!$       end do
+!!$
+!!$       ! Provide global numbering of elements used for coarsening
+!!$       call MPI_Allreduce(amr_rcn%msh_rcn%crs_nr, gnum, 1, MPI_INTEGER, MPI_SUM, & !????????
+!!$            & NEKO_COMM, ierr)
+!!$       ! get global offset
+!!$       call MPI_Scan(amr_rcn%msh_rcn%crs_nr, goff, 1, MPI_INTEGER, MPI_SUM, &
+!!$            & NEKO_COMM, ierr)
+!!$       goff = goff - amr_rcn%msh_rcn%crs_nr
+!!$       if (amr_rcn%msh_rcn%crs_nr > 0) then
+!!$          itmp = msh%glb_nelv + (msh%npts - 1)*goff
+!!$          do il = 1, amr_rcn%msh_rcn%crs_nr ! loop on p4est distribution
+!!$             do jl = 2, msh%npts
+!!$                itmp = itmp + 1
+!!$                amr_rcn%msh_rcn%elgl_crs(1, jl, il) = itmp
+!!$             end do
+!!$          end do
+!!$       end if
+!!$
+!!$       ! PLACE FOR COARSENING DATA TRANSFER AND SORTING; child owner
+!!$
+!!$       ! save local number of elements to be coarsened (child owner)
+!!$       ! crs_nr_s = ???? ! THIS IS JUST TEST SPECIFFIC in general it should be result of communication
+!!$       if (amr_rcn%msh_rcn%crs_nr == 0) then
+!!$          amr_rcn%msh_rcn%crs_nr_s = 0
+!!$       else
+!!$          amr_rcn%msh_rcn%crs_nr_s = msh%nelv
+!!$       end if
+!!$       ! sanity check (sum of unchaged, refined parents and corsend children has to be equal nelvo)
+!!$       if (amr_rcn%msh_rcn%nelvo /= amr_rcn%msh_rcn%crs_nr_s + &
+!!$            & amr_rcn%msh_rcn%map_nr + &
+!!$            & amr_rcn%msh_rcn%rfn_nr/msh%npts) call neko_error('Inconsiten')
+!!$
+!!$       ! update global rank mapping
+!!$       ! THIS LOOP SHOULD LOOK DIFFERENT WITH COMMUNICATION
+!!$       do il = 1, amr_rcn%msh_rcn%crs_nr ! loop over elements on child owner
+!!$          do jl = 1, msh%npts
+!!$             if (amr_rcn%msh_rcn%elgl_map(1, amr_rcn%msh_rcn%elgl_crs(3, jl, il)) == 0) then
+!!$                amr_rcn%msh_rcn%elgl_map(1, jl) = amr_rcn%msh_rcn%elgl_crs(1, jl, il)
+!!$                amr_rcn%msh_rcn%elgl_map(3, jl) = pe_rank ! this is just speciffic to a test case; in general wrong
+!!$             else
+!!$                call neko_error('Refinement transfer index already used; coarsening.')
+!!$             end if
+!!$          end do
+!!$       end do
+!!$
+!!$       ! PLACE FOR COARSENING DATA TRANSFER AND SORTING; coarsened element owner
+!!$
+!!$       ! recalculate new childen position
+!!$       ! THIS LOOP HAS TO BE CHANGED FOR COMMUNICATION
+!!$       itmp = msh%nelv
+!!$       do il = 1, amr_rcn%msh_rcn%crs_nr ! loop over children on parent owner
+!!$          ips = itmp
+!!$          !ielo = PARENT GLOBAL NUMBER
+!!$          ! loop over all the children
+!!$          do jl = 1, amr_rcn%msh%npts
+!!$             ! sanity check; global parent position
+!!$             ! NOT NEEDED FOR THIS EXAMPLE
+!!$             ! which child
+!!$             ! EQUAL TO JL IN THIS EXAMPLE
+!!$             ich = jl
+!!$             ! new global element number
+!!$             ! DOESN'T CHANGE IN THIS EXAMPLE
+!!$             ! local child position
+!!$             if (ich == 1) then
+!!$                amr_rcn%msh_rcn%elgl_crs(1, jl, il) = il ! this is not correct in general
+!!$             else
+!!$                itmp = itmp + 1
+!!$                amr_rcn%msh_rcn%elgl_crs(1, jl, il) = ips + ich - 1
+!!$             end if
+!!$          end do
+!!$       end do
+!!$       ! save local number of elements before coarsening
+!!$       amr_rcn%msh_rcn%crs_nr_b = itmp
+!!$       ! PLACE TO UPDATE amr_rcn%msh_rcn%crs_nr TO NEKO LOCAL VALUE (parent owner)
+          
+    end if ! ifmod
 
-       ! Reshuffle data to get propper mapping on the destination rank
-       ! THIS SHOULD BE CHANGED AFTER ADDING COMMUNICATION
-       allocate(lel_map(3,msh%nelv)) ! new mesh size; for this case only
-       lel_map(:,:) = 0
-       do il = 1, msh%nelv
-          lel_map(3,il) = -1
-          if (amr_rcn%msh_rcn%elgl_map(1,il) /= 0) then
-             lel_map(1, amr_rcn%msh_rcn%elgl_map(2,il)) = msh%offset_el + il
-             lel_map(3, amr_rcn%msh_rcn%elgl_map(2,il)) = pe_rank ! this is just speciffic to a test case; in genera wrong
-          end if
-       end do
-       call MOVE_ALLOC(lel_map,amr_rcn%msh_rcn%elgl_map)
-
-       ! PLACE FOR TRANSFER/SORTING OF REFINEMENT DATA DATA
-
-       ! Recalculate local position of refined element on the destination rank
-       ! THIS SHOULD BE CHANGED AFTER ADDING COMMUNICATION AS IT WOULD INCLUDE COPY
-       ! RIGHT NOW IT IS JUST LOCAL POSITION UPDATE
-       ! SORTING IS IMPORTANT
-       ! loop over refined elements
-       itmp = nelvo
-       do il = 1, amr_rcn%msh_rcn%rfn_nr, amr_rcn%msh%npts
-          ips = itmp
-          ielo = amr_rcn%msh_rcn%elgl_rfn(3, il)
-          ! loop over all the children
-          do jl = 1, amr_rcn%msh%npts
-             ! which child
-             ich = amr_rcn%msh_rcn%elgl_rfn(5, il + jl - 1)
-             ! local parent position sanity check
-             if (amr_rcn%msh_rcn%elgl_rfn(3, il + jl - 1) /= ielo) &
-                  & call neko_error('Children do not share parent')
-             ! new position at the end of the array
-             if (ich > 0) then
-                itmp = itmp + 1
-                amr_rcn%msh_rcn%elgl_rfn(3, il + ich) = ips + ich
-             end if
-          end do
-       end do
-
-       ! update global rank mapping
-       do il = 1, amr_rcn%msh_rcn%rfn_nr
-          jl = amr_rcn%msh_rcn%elgl_rfn(3, il)
-          if (amr_rcn%msh_rcn%elgl_map(1, jl) == 0) then
-             amr_rcn%msh_rcn%elgl_map(1, jl) = amr_rcn%msh_rcn%elgl_rfn(1, il)
-             amr_rcn%msh_rcn%elgl_map(3, jl) = pe_rank ! this is just speciffic to a test case; in general wrong
-          else
-             call neko_error('Refinement transfer index already used.')
-          end if
-       end do
-
-       ! Provide global numbering of elements used for coarsening
-       call MPI_Allreduce(amr_rcn%msh_rcn%crs_nr, gnum, 1, MPI_INTEGER, MPI_SUM, &
-            & NEKO_COMM, ierr)
-       ! get global offset
-       call MPI_Scan(amr_rcn%msh_rcn%crs_nr, goff, 1, MPI_INTEGER, MPI_SUM, &
-            & NEKO_COMM, ierr)
-       goff = goff - amr_rcn%msh_rcn%crs_nr
-       if (amr_rcn%msh_rcn%crs_nr > 0) then
-          itmp = msh%glb_nelv + (msh%npts - 1)*goff
-          do il = 1, amr_rcn%msh_rcn%crs_nr
-             do jl = 1, msh%npts
-                itmp = itmp + 1
-                amr_rcn%msh_rcn%elgl_crs(1, jl, il) = itmp
-             end do
-          end do
-
-          ! PLACE FOR COARSENING DATA TRANSFER
-       end if
-    end if
+!!$    testing : block
+!!$      integer :: ierr
+!!$      write(*,*) 'TESTING0', pe_rank, amr_rcn%msh_rcn%nelvo, amr_rcn%msh%nelv, &
+!!$           & amr_rcn%msh_rcn%map_nr, amr_rcn%msh_rcn%rfn_nr, amr_rcn%msh_rcn%crs_nr,&
+!!$           & amr_rcn%msh_rcn%rfn_nr_a, amr_rcn%msh_rcn%crs_nr_s, amr_rcn%msh_rcn%crs_nr_b, goff, gnum
+!!$      call MPI_Barrier(NEKO_COMM, ierr)
+!!$      !call neko_log%end_section()
+!!$      return
+!!$      !call neko_error('This is not an error.')
+!!$    end block testing
 
     ! free memory
-    deallocate(ref_mark)
 
     call neko_log%end_section()
 
     return
-  end subroutine amr_msh_refine_all
+  end subroutine amr_msh_refine
 
   ! Refine all elements in field
-  subroutine amr_fluid_refine_all(msh, fld)
+  subroutine amr_fluid_refine(msh, fld, param, ref_mark)
     ! argument list
     type(mesh_t), intent(inout) :: msh
     class(fluid_scheme_t), intent(inout) :: fld
+    type(param_t), intent(in) :: param
+    integer(i4), dimension(:), intent(inout) :: ref_mark
     ! local variables
-    integer(i4) :: nelvo, nelgvo
+    integer(i4) :: itmp
     real(dp), allocatable, dimension(:,:,:,:) :: tmpv
 
     ! ALL THIS SHOULD BE PART OF TYPE EXTENSION, BUT FOR TESTING IT SHOULD BE FINE
@@ -634,15 +745,12 @@ contains
     type is(fluid_plan4_t)
        call neko_error('Nothing done for plan4')
     type is(fluid_pnpn_t)
-       ! keep old mesh size
-       nelvo = msh%nelv
-       nelgvo = msh%glb_nelv
        ! perform refinement on p4est side and import the mesh
-       call amr_msh_refine_all(msh)
+       call amr_msh_refine(msh, param, ref_mark)
 
-       !test refinement fo a single field
+       !test refinement on a single field
        allocate(tmpv(fld%Xh%lx, fld%Xh%ly, fld%Xh%lz,msh%nelv))
-       tmpv(:,:,:,1:nelvo) = fld%dm_Xh%x(:,:,:,:)
+       tmpv(:,:,:,1:amr_rcn%msh_rcn%nelvo) = fld%dm_Xh%x(:,:,:,:)
        call amr_rcn_refine_coarsen_single(amr_rcn, tmpv)
        ! reinitialise variables
        ! degrees of freedom; THIS SHOULD BE POSSIBLY CHANGED TO SUBROUTINE TAKING VARIABLE
@@ -654,13 +762,13 @@ contains
 
        testing : block
          integer :: ierr
-         ! write(*,*) 'TEST size', pe_rank, nelvo, msh%nelv, nelgvo, msh%glb_nelv
+         write(*,*) 'TEST size', pe_rank, amr_rcn%msh_rcn%nelvo, msh%nelv, msh%glb_nelv
          call MPI_Barrier(NEKO_COMM, ierr)
          call neko_error('This is not an error.')
        end block testing
     end select
 
     return
-  end subroutine amr_fluid_refine_all
+  end subroutine amr_fluid_refine
 
 end module amr

@@ -15,7 +15,7 @@ module p4est
   implicit none
 
   private
-  public :: p4_msh_rcn_t, p4_init, p4_finalize, p4_msh_get, p4_refine, p4
+  public :: p4_msh_trs_t, p4_msh_rcn_t, p4_init, p4_finalize, p4_msh_get, p4_refine, p4
 
   ! Following node types contain geometrical and conectivity information for the mesh
   ! Type for independent nodes
@@ -251,19 +251,29 @@ module p4est
      type(p4_element_t) :: elem
   end type p4_mesh_import_t
 
+  ! type for data transfer between p4est and neko
+  type p4_msh_trs_t
+     ! p4est <=> neko element distribution mapping (global element number, process id)
+     integer(i4), allocatable, dimension(:, :) :: elmap_p2n, elmap_n2p
+     contains
+     procedure, public, pass(this) :: free => p4_msh_trs_free
+  end type p4_msh_trs_t
+
   ! type for element reconstruction
   type p4_msh_rcn_t
-     ! arrays to store global element re-mapping to perform refinement on nek5000 side
+     ! arrays to store global element re-mapping to perform refinement on neko side
      ! map_nr - local number of unchanged elements
      ! rfn_nr - local number of refined elements
-     ! AMR_RFN_NR_S - local number of elements to be send; including refined ones
      ! crs_nr - local number of coarsened elements
-     ! AMR_CRS_NR_S - local number of elements to be send for coarsening
+     ! rfn_nr_a - local number of elements after refinement (including refined ones)
+     ! crs_nr_s - local number of elements for coarsening (chidl owner); THIS IS MOST PROBABLY NOT NEEDED
+     ! crs_nr_b - local number of elements before coarsening (parent owner; including one that would disappear)
+     ! nelvo - old number of local elements
+     integer(i4) :: map_nr, rfn_nr, crs_nr, rfn_nr_a, crs_nr_s, crs_nr_b, nelvo
      ! elgl_map - element number/process id mapping data for unchanged elements (old gl. num., old loc. num., old proc. id)
      ! elgl_rfn - element number/process id mapping data for refined elements (ch. gl. num., old p. gl. num., old p. loc. num., old p. proc. id, ch. pos.)
-     ! elgl_crs - element number/process id mapping data for coarsened elements (new gl. num., old ch. gl. num., old ch. loc. num., old ch. proc. id)
-     integer(i4) :: map_nr, rfn_nr, crs_nr
      integer(i4), allocatable, dimension(:, :) :: elgl_map, elgl_rfn
+     ! elgl_crs - element number/process id mapping data for coarsened elements (new gl. num., old ch. gl. num., old ch. loc. num., old ch. proc. id)
      integer(i4), allocatable, dimension(:, :, :) :: elgl_crs
    contains
      procedure, public, pass(this) :: free => p4_msh_rcn_free
@@ -536,7 +546,7 @@ contains
     integer :: log_thr, slen, ierr, is_valid
     character(18) :: log_cval
     ! p4est file reading
-    character(len=NEKO_FNAME_LEN) :: p4est_file = ''
+    character(len=80) :: suffix
 
     if (.not.p4%initialised) then
        ! get log threshold for p4est and sc librarioes
@@ -562,10 +572,11 @@ contains
        p4%initialised = .true.
 
        ! p4est file reading
-       call filename_chsuffix(trim(mesh_file), p4est_file, 'p4est')
-       call neko_log%message('Reading p4est file ' // trim(p4est_file))
+       call filename_suffix(mesh_file, suffix)
+       if (trim(suffix) /= 'p4est') call neko_error('Expected p4est mesh file')
+       call neko_log%message('Reading p4est file ' // trim(mesh_file))
        call wp4est_tree_load(NEKO_COMM%mpi_val,load_data, &
-            & trim(p4est_file)//c_null_char)
+            & trim(mesh_file)//c_null_char)
        ! check consistency of a forest and a connectivity
        call wp4est_tree_valid(is_valid)
        if (is_valid == 0) call neko_error('Invalid p4est tree')
@@ -697,15 +708,17 @@ contains
   end subroutine p4_msh_get
 
   !> perform refinement based on refinement flag
-  subroutine p4_refine(ref_mark, level_max, ifmod, msh_rcn)
+  subroutine p4_refine(ref_mark, el_gidx, msh_trs, level_max, ifmod, msh_rcn)
     ! argument list
-    integer(i4), dimension(:), intent(in) :: ref_mark
+    integer(i4), dimension(:), intent(in) :: ref_mark, el_gidx
+    type(p4_msh_trs_t), intent(in) :: msh_trs
     integer(i4), intent(in) :: level_max
     logical, intent(out) :: ifmod
     type(p4_msh_rcn_t), intent(out) :: msh_rcn
     ! local variables
     integer(i4) :: il, itmp
-    integer(i4), target, allocatable, dimension(:) :: lref_mark, el_gnum, el_lnum, el_nid
+    integer(i4), target, allocatable, dimension(:) :: pref_mark, pel_gnum, pel_lnum, pel_nid
+    integer(i4), allocatable, dimension(:) :: nel_gnum, nel_lnum, nel_nid
     ! element restructure data
     integer(i4) :: map_nr, rfn_nr, crs_nr
     integer(i4), target, allocatable, dimension(:, :) :: elgl_map, elgl_rfn
@@ -723,23 +736,32 @@ contains
     integer(i4), parameter :: p4test = 1
 
     itmp = size(ref_mark)
-    if (itmp /= p4%elem%nelv) call neko_error('Inconsistent array size')
+    if (itmp /= size(el_gidx)) call neko_error('Inconsistent array size')
 
     ! put refinement mark in p4est
-    allocate(lref_mark(p4%elem%nelv))
-    lref_mark(:) = ref_mark(:)
+     allocate(pref_mark(p4%elem%nelv))
+    ! PLACE FOR DATA DISTRIBUTION (NEKO => P4EST) using msh_trs
+    ! in general itmp can be different than p4%elem%nelv, but for now they are the same
+    pref_mark(1:itmp) = ref_mark(1:itmp)
     ! PLACE FOR LOCAL CONSISTENCY CHECKS
-    call wp4est_refm_put(c_loc(lref_mark))
+    call wp4est_refm_put(c_loc(pref_mark))
 
     ! put element distribution info in p4est
-    ! THIS IS JUST A TESTING VERSION FOR REFINE ALL
-    allocate(el_gnum(p4%elem%nelv), el_lnum(p4%elem%nelv), el_nid(p4%elem%nelv))
-    do il = 1, p4%elem%nelv
-       el_gnum(il) = p4%elem%gidx(il)
-       el_lnum(il) = il
+    allocate(pel_gnum(p4%elem%nelv), pel_lnum(p4%elem%nelv), pel_nid(p4%elem%nelv))
+    allocate(nel_gnum(itmp), nel_lnum(itmp), nel_nid(itmp))
+    ! 
+    do il = 1, itmp
+       nel_gnum(il) = el_gidx(il)
+       nel_lnum(il) = il
     end do
-    el_nid(:) = pe_rank
-    call wp4est_egmap_put(c_loc(el_gnum), c_loc(el_lnum), c_loc(el_nid))
+    nel_nid(:) = pe_rank
+    ! PLACE FOR DATA DISTRIBUTION (NEKO=> P4EST) using msh_trs
+    ! in general itmp can be different than p4%elem%nelv, but for now they are the same
+    pel_gnum(1:itmp) = nel_gnum(1:itmp)
+    pel_lnum(1:itmp) = nel_lnum(1:itmp)
+    pel_nid(1:itmp) = nel_nid(1:itmp)
+    ! this possibly could be reconstructed from msh_trs, so no communication would be necessary
+    call wp4est_egmap_put(c_loc(pel_gnum), c_loc(pel_lnum), c_loc(pel_nid))
 
     ! perform local refine/coarsen/balance on p4est side
     call wp4est_tree_copy(p4test)
@@ -774,7 +796,7 @@ contains
     end if
 
     ! free memory
-    deallocate(lref_mark, el_gnum, el_lnum, el_nid)
+    deallocate(pref_mark, pel_gnum, pel_lnum, pel_nid, nel_gnum, nel_lnum, nel_nid)
 
     return
   end subroutine p4_refine
@@ -835,6 +857,17 @@ contains
     return
   end subroutine p4_mesh_import_free
 
+  subroutine p4_msh_trs_free(this)
+    ! argument list
+    class(p4_msh_trs_t), intent(inout) :: this
+
+    ! Deallocate arrays
+    if (allocated(this%elmap_p2n)) deallocate(this%elmap_p2n)
+    if (allocated(this%elmap_n2p)) deallocate(this%elmap_n2p)
+
+    return
+  end subroutine p4_msh_trs_free
+
   subroutine p4_msh_rcn_free(this)
     ! argument list
     class(p4_msh_rcn_t), intent(inout) :: this
@@ -845,7 +878,10 @@ contains
     if (allocated(this%elgl_crs)) deallocate(this%elgl_crs)
     this%map_nr = 0
     this%rfn_nr = 0
-    this%rfn_nr = 0
+    this%crs_nr = 0
+    this%rfn_nr_a = 0
+    this%crs_nr_b = 0
+    this%nelvo = 0
 
     return
   end subroutine p4_msh_rcn_free
@@ -1987,8 +2023,9 @@ contains
     return
   end subroutine p4_msh_get
 
-  subroutine p4_refine(ref_mark, level_max, ifmod, msh_rcn)
-    integer(i4), dimension(:), intent(in) :: ref_mark
+  subroutine p4_refine(ref_mark, el_gidx, msh_trs, level_max, ifmod, msh_rcn)
+    integer(i4), dimension(:), intent(in) :: ref_mark, el_gidx
+    type(p4_msh_trs_t), intent(in) :: msh_trs
     integer(i4), intent(in) :: level_max
     logical, intent(out) :: ifmod
     type(p4_msh_rcs_t), intent(out) :: msh_rcn
