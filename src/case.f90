@@ -35,6 +35,7 @@ module case
   use num_types
   use fluid_fctry
   use fluid_output
+  use scalar_output
   use chkp_output
   use mean_sqr_flow_output
   use mean_flow_output
@@ -50,28 +51,31 @@ module case
   use utils
   use mesh
   use comm
-  use abbdf
+  use ext_bdf_scheme
   use logger
   use jobctrl
   use p4est
   use amr
   use user_intf  
+  use scalar_pnpn ! todo directly load the pnpn? can we have other
   implicit none
 
   type :: case_t
      type(mesh_t) :: msh
      type(param_t) :: params
-     type(abbdf_t) :: ab_bdf
+     type(ext_bdf_scheme_t) :: ext_bdf
      real(kind=rp), dimension(10) :: tlag
      real(kind=rp), dimension(10) :: dtlag
      type(sampler_t) :: s
      type(fluid_output_t) :: f_out
+     type(scalar_output_t) :: s_out
      type(chkp_output_t) :: f_chkp
      type(mean_flow_output_t) :: f_mf
      type(mean_sqr_flow_output_t) :: f_msqrf
      type(stats_t) :: q   
      type(user_t) :: usr
      class(fluid_scheme_t), allocatable :: fluid
+     type(scalar_pnpn_t), allocatable :: scalar 
   end type case_t
 
 contains
@@ -87,33 +91,35 @@ contains
     character(len=80) :: source_term = ''
     character(len=80) :: initial_condition = ''
     integer :: lx = 0
+    logical :: scalar = .false.
+    character(len=80) :: scalar_source_term = ''
     logical :: amr = .false.
     type(param_io_t) :: params
     namelist /NEKO_CASE/ mesh_file, fluid_scheme, lx,  &
-         source_term, initial_condition, amr
+         source_term, initial_condition, scalar, scalar_source_term,  &
+         amr
     
     integer :: ierr
     type(file_t) :: msh_file, bdry_file, part_file
     type(mesh_fld_t) :: msh_part
-    integer, parameter :: nbytes = NEKO_FNAME_LEN + 240 + 8 + 4
+    integer, parameter :: nbytes = NEKO_FNAME_LEN + (4 * 80) + 4 + 4 + 4
     character buffer(nbytes)
     integer :: pack_index
     type(mesh_fld_t) :: parts
-    
+   
     call neko_log%section('Case')
     call neko_log%message('Reading case file ' // trim(case_file))
     
     !
     ! Read case description
     !
-    
     if (pe_rank .eq. 0) then
        open(10, file=trim(case_file))
        read(10, nml=NEKO_CASE)
        read(10, *) params
        close(10)
        
-       pack_index = 1
+       pack_index = 0
        call MPI_Pack(mesh_file, NEKO_FNAME_LEN, MPI_CHARACTER, &
             buffer, nbytes, pack_index, NEKO_COMM, ierr)
        call MPI_Pack(fluid_scheme, 80, MPI_CHARACTER, &
@@ -122,7 +128,11 @@ contains
             buffer, nbytes, pack_index, NEKO_COMM, ierr)
        call MPI_Pack(initial_condition, 80, MPI_CHARACTER, &
             buffer, nbytes, pack_index, NEKO_COMM, ierr)
+       call MPI_Pack(scalar_source_term, 80, MPI_CHARACTER, &
+            buffer, nbytes, pack_index, NEKO_COMM, ierr)
        call MPI_Pack(lx, 1, MPI_INTEGER, &
+            buffer, nbytes, pack_index, NEKO_COMM, ierr)
+       call MPI_Pack(scalar, 1, MPI_LOGICAL, &
             buffer, nbytes, pack_index, NEKO_COMM, ierr)
        call MPI_Pack(amr, 1, MPI_LOGICAL, &
             buffer, nbytes, pack_index, NEKO_COMM, ierr)
@@ -130,7 +140,7 @@ contains
        call MPI_Bcast(params%p, 1, MPI_NEKO_PARAMS, 0, NEKO_COMM, ierr)
     else
        call MPI_Bcast(buffer, nbytes, MPI_PACKED, 0, NEKO_COMM, ierr)
-       pack_index = 1
+       pack_index = 0
 
        call MPI_Unpack(buffer, nbytes, pack_index, &
             mesh_file, NEKO_FNAME_LEN, MPI_CHARACTER, NEKO_COMM, ierr)
@@ -141,7 +151,11 @@ contains
        call MPI_Unpack(buffer, nbytes, pack_index, &
             initial_condition, 80, MPI_CHARACTER, NEKO_COMM, ierr)
        call MPI_Unpack(buffer, nbytes, pack_index, &
+            scalar_source_term, 80, MPI_CHARACTER, NEKO_COMM, ierr)
+       call MPI_Unpack(buffer, nbytes, pack_index, &
             lx, 1, MPI_INTEGER, NEKO_COMM, ierr)
+       call MPI_Unpack(buffer, nbytes, pack_index, &
+            scalar, 1, MPI_LOGICAL, NEKO_COMM, ierr)
        call MPI_Unpack(buffer, nbytes, pack_index, &
             amr, 1, MPI_LOGICAL, NEKO_COMM, ierr)
        call MPI_Bcast(params%p, 1, MPI_NEKO_PARAMS, 0, NEKO_COMM, ierr)
@@ -194,7 +208,7 @@ contains
     ! Setup user defined functions
     !
     call C%usr%init()
-    call C%usr%usr_msh_setup(C%msh)
+    call C%usr%user_mesh_setup(C%msh)
     
     !
     ! Setup fluid scheme
@@ -269,21 +283,44 @@ contains
 !!$    end block testing_gs
 
     !
+    ! Setup scalar scheme
+    !
+    ! @todo no scalar factroy for now, probably not needed
+    if (scalar) then
+       allocate(C%scalar)
+       call C%scalar%init(C%msh, C%fluid%c_Xh, C%fluid%gs_Xh, C%params)
+    end if
+    !
     ! Setup user defined conditions    
     !
     if (trim(C%params%fluid_inflow) .eq. 'user') then
-       call C%fluid%set_usr_inflow(C%usr%fluid_usr_if)
+       call C%fluid%set_usr_inflow(C%usr%fluid_user_if)
     end if
     
     !
     ! Setup source term
     ! 
     if (trim(source_term) .eq. 'user') then
-       call C%fluid%set_source(trim(source_term), usr_f=C%usr%fluid_usr_f)
+       call C%fluid%set_source(trim(source_term), usr_f=C%usr%fluid_user_f)
     else if (trim(source_term) .eq. 'user_vector') then
-       call C%fluid%set_source(trim(source_term), usr_f_vec=C%usr%fluid_usr_f_vector)
+       call C%fluid%set_source(trim(source_term), &
+            usr_f_vec=C%usr%fluid_user_f_vector)
     else
        call C%fluid%set_source(trim(source_term))
+    end if
+
+    ! Setup source term for the scalar
+    ! @todo should be expanded for user sources etc. Now copies the fluid one
+    if (scalar) then
+       if (trim(scalar_source_term) .eq. 'user') then
+          call C%scalar%set_source(trim(scalar_source_term), &
+               usr_f=C%usr%scalar_user_f)
+       else if (trim(scalar_source_term) .eq. 'user_vector') then
+          call C%scalar%set_source(trim(scalar_source_term), &
+               usr_f_vec=C%usr%scalar_user_f_vector)
+       else
+          call C%scalar%set_source(trim(scalar_source_term))
+       end if
     end if
 
     !
@@ -295,7 +332,7 @@ contains
                C%fluid%c_Xh, C%fluid%gs_Xh, initial_condition, C%params)
        else
           call set_flow_ic(C%fluid%u, C%fluid%v, C%fluid%w, C%fluid%p, &
-               C%fluid%c_Xh, C%fluid%gs_Xh, C%usr%fluid_usr_ic, C%params)
+               C%fluid%c_Xh, C%fluid%gs_Xh, C%usr%fluid_user_ic, C%params)
        end if
     end if
 
@@ -315,15 +352,21 @@ contains
        call f%wlag%set(f%w)
     end select
 
+
     !
     ! Validate that the case is properly setup for time-stepping
     !
     call C%fluid%validate
 
+    if (scalar) then
+       call C%scalar%slag%set(C%scalar%s)
+       call C%scalar%validate
+    end if
+
     !
     ! Set order of timestepper
     !
-    call C%ab_bdf%set_time_order(C%params%time_order)
+    call C%ext_bdf%set_time_order(C%params%time_order)
 
     !
     ! Save boundary markings for fluid (if requested)
@@ -350,6 +393,11 @@ contains
     call C%s%init(C%params%nsamples, C%params%T_end)
     C%f_out = fluid_output_t(C%fluid, path=C%params%output_dir)
     call C%s%add(C%f_out)
+
+    if (scalar) then
+       C%s_out = scalar_output_t(C%scalar, path=C%params%output_dir)
+       call C%s%add(C%s_out)
+    end if
 
     !
     ! Save checkpoints (if requested)
@@ -408,6 +456,11 @@ contains
     if (allocated(C%fluid)) then
        call C%fluid%free()
        deallocate(C%fluid)
+    end if
+
+    if (allocated(C%scalar)) then
+       call C%scalar%free()
+       deallocate(C%scalar)
     end if
 
     call mesh_free(C%msh)

@@ -50,11 +50,11 @@ module dofmap
 
   type, public :: dofmap_t
      integer(kind=i8), allocatable :: dof(:,:,:,:)  !< Mapping to unique dof
-     logical, allocatable :: shared_dof(:,:,:,:)   !< True if the dof is shared
-     real(kind=rp), allocatable :: x(:,:,:,:)      !< Mapping to x-coordinates
-     real(kind=rp), allocatable :: y(:,:,:,:)      !< Mapping to y-coordinates
-     real(kind=rp), allocatable :: z(:,:,:,:)      !< Mapping to z-coordinates
-     integer :: n_dofs                             !< Total number of dofs
+     logical, allocatable :: shared_dof(:,:,:,:)    !< True if the dof is shared
+     real(kind=rp), allocatable :: x(:,:,:,:)       !< Mapping to x-coordinates
+     real(kind=rp), allocatable :: y(:,:,:,:)       !< Mapping to y-coordinates
+     real(kind=rp), allocatable :: z(:,:,:,:)       !< Mapping to z-coordinates
+     integer, private :: ntot                       !< Total number of dofs
 
      type(mesh_t), pointer :: msh
      type(space_t), pointer :: Xh
@@ -94,7 +94,7 @@ contains
     this%msh => msh
     this%Xh => Xh
 
-    this%n_dofs = Xh%lx* Xh%ly * Xh%lz * msh%nelv
+    this%ntot = Xh%lx* Xh%ly * Xh%lz * msh%nelv
         
     !
     ! Assign a unique id for all dofs
@@ -131,15 +131,14 @@ contains
 
     call dofmap_generate_xyz(this)    
 
-    if ((NEKO_BCKND_HIP .eq. 1) .or. (NEKO_BCKND_CUDA .eq. 1) .or. &
-        (NEKO_BCKND_OPENCL .eq. 1)) then 
-       call device_map(this%x, this%x_d, this%n_dofs)
-       call device_map(this%y, this%y_d, this%n_dofs)
-       call device_map(this%z, this%z_d, this%n_dofs)
+    if (NEKO_BCKND_DEVICE .eq. 1) then
+       call device_map(this%x, this%x_d, this%ntot)
+       call device_map(this%y, this%y_d, this%ntot)
+       call device_map(this%z, this%z_d, this%ntot)
 
-       call device_memcpy(this%x, this%x_d, this%n_dofs, HOST_TO_DEVICE)
-       call device_memcpy(this%y, this%y_d, this%n_dofs, HOST_TO_DEVICE)
-       call device_memcpy(this%z, this%z_d, this%n_dofs, HOST_TO_DEVICE)
+       call device_memcpy(this%x, this%x_d, this%ntot, HOST_TO_DEVICE)
+       call device_memcpy(this%y, this%y_d, this%ntot, HOST_TO_DEVICE)
+       call device_memcpy(this%z, this%z_d, this%ntot, HOST_TO_DEVICE)
     end if
 
 !!$    testing : block
@@ -235,7 +234,7 @@ contains
   pure function dofmap_size(this) result(res)
     class(dofmap_t), intent(in) :: this
     integer :: res
-    res = this%n_dofs
+    res = this%ntot
   end function dofmap_size
 
   !> Perform AMR refinement/coarsening
@@ -262,12 +261,12 @@ contains
        else
           do il = 1, msh%nelv
              do jl = 1, msh%npts
-                ix = mod(jl -1 ,2)
-                iy = mod(jl -1 ,4)/2
-                iz = (jl - 1)/4
-                this%dof(ix*(Xh%lx - 1) + 1, iy*(Xh%ly - 1) + 1, iz*(Xh%lz - 1) + 1, il) = &
+                ix = mod(jl -1 ,2) * (Xh%lx - 1) + 1
+                iy = mod(jl -1 ,4)/2 *(Xh%ly - 1) + 1
+                iz = (jl - 1)/4 * (Xh%lz - 1) + 1
+                this%dof(ix, iy, iz, il) = &
                      & p4%elem%vert%lgidx(p4%elem%vert%lmap(jl,il))
-                this%shared_dof(ix*(Xh%lx - 1) + 1, iy*(Xh%ly - 1) + 1, iz*(Xh%lz - 1) + 1, il) = &
+                this%shared_dof(ix, iy, iz, il) = &
                      & msh%ddata%shared_point%element(p4%elem%vert%lmap(jl,il))
              end do
           end do
@@ -275,13 +274,12 @@ contains
     else
        do il = 1, msh%nelv
           do jl = 1, msh%npts
-             ix = mod(jl - 1, 2)
-             iy = mod(jl - 1, 4)/2
-             iz = (jl - 1)/4
-             this%dof(ix*(Xh%lx - 1) + 1, iy*(Xh%ly - 1) + 1, iz*(Xh%lz - 1) + 1, il) = &
-                  & int(msh%elements(il)%e%pts(jl)%p%id(), i8)
-             this%shared_dof(ix*(Xh%lx - 1) + 1, iy*(Xh%ly - 1) + 1, iz*(Xh%lz - 1) + 1, il) = &
-                  & mesh_is_shared(msh, msh%elements(il)%e%pts(jl)%p)
+             ix = mod(jl - 1, 2) * (Xh%lx - 1) + 1
+             iy = (mod(jl - 1, 4)/2) *(Xh%ly - 1) + 1
+             iz = ((jl - 1)/4) * (Xh%lz - 1) + 1
+             this%dof(ix, iy, iz, il) = int(msh%elements(il)%e%pts(jl)%p%id(), i8)
+             this%shared_dof(ix, iy, iz, il) = &
+                  mesh_is_shared(msh, msh%elements(il)%e%pts(jl)%p)
           end do
        end do
     end if

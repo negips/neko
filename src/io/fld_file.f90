@@ -37,6 +37,7 @@ module fld_file
   use field
   use dofmap
   use fluid_method
+  use scalar
   use mean_flow
   use mean_sqr_flow
   use mesh
@@ -130,6 +131,16 @@ contains
        dof => p%dof
        write_pressure = .true.
        write_velocity = .true.
+    class is (scalar_scheme_t)
+       u => data%u
+       v => data%v
+       w => data%w
+       p => data%s
+       msh => p%msh
+       Xh => p%Xh
+       dof => p%dof
+       write_pressure = .true.
+       write_velocity = .false.
     class default
        call neko_error('Invalid data')
     end select

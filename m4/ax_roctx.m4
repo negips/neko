@@ -8,7 +8,7 @@
 #
 AC_DEFUN([AX_ROCTX],[
         AC_ARG_WITH([roctx],
-                    AC_HELP_STRING([--with-roctx=DIR],
+                    AS_HELP_STRING([--with-roctx=DIR],
                     [Compile with support for ROCTX]),
                     [
                     if test -d "$withval"; then
@@ -46,7 +46,7 @@ AC_DEFUN([AX_ROCTX],[
                  roctx_bcknd="1"
                  AC_DEFINE(HAVE_ROCTX,1,[Define if you have ROCTX.])
                  LIBS="$ROCTX_LIBS $_LIBS"
-                 CUDA_CFLAGS="$CUDA_CFLAGS $ROCTX_CFLAGS"
+                 HIP_HIPCC_FLAGS="$HIP_HIPCC_FLAGS $ROCTX_CFLAGS"
               else
                  AC_MSG_ERROR([ROCTX not found])
               fi
