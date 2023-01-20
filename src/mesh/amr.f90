@@ -1,3 +1,4 @@
+!> Main interface for h-type amr in neko
 module amr
   use mpi_f08
   use num_types

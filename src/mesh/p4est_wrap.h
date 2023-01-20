@@ -1,10 +1,5 @@
-/** @file p4est_wrap.h
- * @brief Wrapper interface of sc library
+/** Wrapper interface of p4est and sc libraries
  *
- * @author Adam Peplinski
- * @date Aug 19, 2022
- *
-
  */
 #ifndef NEKO_P4EST_FWRAP_H_
 #define NEKO_P4EST_FWRAP_H_

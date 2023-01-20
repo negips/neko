@@ -3,7 +3,7 @@
  * Wrapper for p4est and sc libraries.
  *
  *  Created on: Aug 19, 2022
- *      Author: Adam Peplinski
+ *  Author: Adam Peplinski
  */
 
 // libsc speciffic definitions
