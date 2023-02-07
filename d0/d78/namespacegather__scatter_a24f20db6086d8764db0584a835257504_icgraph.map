@@ -1,0 +1,13 @@
+<map id="gather_scatter::gs_op_vector" name="gather_scatter::gs_op_vector">
+<area shape="rect" id="node1" title="Gather&#45;scatter operation on a vector u with op op." alt="" coords="915,125,1053,167"/>
+<area shape="rect" id="node2" href="$d3/d06/namespaceprojection.html#a25be6cf95eeacd177d57821fe46a5e18" title=" " alt="" coords="643,53,867,79"/>
+<area shape="rect" id="node3" href="$d0/d78/namespacegather__scatter.html#a6abafa7eaef0e406c6d411d8554b8bee" title="Initialize a gather&#45;scatter kernel." alt="" coords="671,103,838,130"/>
+<area shape="rect" id="node10" href="$dd/d74/interfacegather__scatter_1_1gs__op.html#afd484f330e2c5e7f48d937147c5ce926" title="Gather&#45;scatter operation on a field u with op op." alt="" coords="685,155,824,196"/>
+<area shape="rect" id="node11" href="$dd/d74/interfacegather__scatter_1_1gs__op.html#ab06b5127115d16e13d7e89b7184c0639" title="Gather&#45;scatter operation on a rank 4 array." alt="" coords="685,220,824,261"/>
+<area shape="rect" id="node4" href="$d9/d33/namespacefluid__method.html#abf89d6c47787ce59d9f15c88c686e9bd" title="Initialize common data for the current scheme." alt="" coords="423,37,595,79"/>
+<area shape="rect" id="node8" href="$dd/dd1/namespacehsmg.html#a203f4c75923462a923b3d5d38e90c896" title=" " alt="" coords="443,103,574,130"/>
+<area shape="rect" id="node9" href="$d2/d37/namespaceschwarz.html#ae614e2a33b051d6843ac45bcff07c6b6" title=" " alt="" coords="427,154,591,181"/>
+<area shape="rect" id="node5" href="$d9/d33/namespacefluid__method.html#a6fe7ef74f445776066d97ddc8a7e5c4a" title="Initialize all components of the current scheme." alt="" coords="232,5,375,47"/>
+<area shape="rect" id="node7" href="$d9/d33/namespacefluid__method.html#a57ffd86a87e9d8adeba3f0ae7625d8ea" title="Initialize all velocity related components of the current scheme." alt="" coords="232,71,375,112"/>
+<area shape="rect" id="node6" href="$d1/dcd/structfluid__method_1_1fluid__scheme__t.html#a7719b9dff0487bde42e6e4c78634160c" title=" " alt="" coords="5,39,184,80"/>
+</map>

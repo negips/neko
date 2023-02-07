@@ -1,0 +1,4 @@
+<map id="device::device_map_r1" name="device::device_map_r1">
+<area shape="rect" id="node1" title="Map a Fortran rank 1 array to a device (allocate and associate)" alt="" coords="220,13,392,39"/>
+<area shape="rect" id="node2" href="$da/d46/namespacepipecg__device.html#ae5da99e6a538e495b8a5637c098ca85a" title="Initialise a pipelined PCG solver." alt="" coords="5,5,172,47"/>
+</map>

@@ -1,0 +1,14 @@
+<map id="simulation::neko_solve" name="simulation::neko_solve">
+<area shape="rect" id="node1" title="Main driver to solve a case C." alt="" coords="5,238,177,265"/>
+<area shape="rect" id="node2" href="$d7/d06/namespacejobctrl.html#aa766aab0c30411254759e41e89d1fb8f" title="Check if the job&#39;s time limit has been reached." alt="" coords="235,5,384,47"/>
+<area shape="rect" id="node4" href="$dc/dfc/namespaceprofiler.html#ab9b09ecf716565d7eb06a640affe74e0" title="End the most recently started profiler region." alt="" coords="248,71,371,112"/>
+<area shape="rect" id="node5" href="$dc/dfc/namespaceprofiler.html#a5e8238cb516ab2660af163e2f152848d" title="Start profiling." alt="" coords="248,136,371,177"/>
+<area shape="rect" id="node7" href="$dc/dfc/namespaceprofiler.html#ab35f4912235e772e33e43d1c271a7989" title="Started a named (name) profiler region." alt="" coords="248,201,371,243"/>
+<area shape="rect" id="node8" href="$dc/dfc/namespaceprofiler.html#a5cf19165cb25aee603d09aeeaaa39f4f" title="Stop profiling." alt="" coords="231,267,388,294"/>
+<area shape="rect" id="node10" href="$d1/d2d/namespacesimulation.html#a933da001f4561bdb159de8e62593bec3" title="Write a checkpoint at joblimit." alt="" coords="225,319,393,360"/>
+<area shape="rect" id="node11" href="$d1/d2d/namespacesimulation.html#af82971b79cd67a50aaed87190a60dd9d" title="Restart a case C from a given checkpoint." alt="" coords="225,384,393,425"/>
+<area shape="rect" id="node12" href="$d1/d2d/namespacesimulation.html#a111609fb01cc2ce135762498895b0515" title=" " alt="" coords="225,449,393,491"/>
+<area shape="rect" id="node3" href="$d1/daf/namespacesignal.html#a1eb78f2982b116e2f5498b9e6957efad" title="Check if any timeout has occurred (either SIGXCPU or SIGALRM)" alt="" coords="460,13,627,39"/>
+<area shape="rect" id="node6" href="$d0/dbe/namespacedevice.html#a4e977c65dcfb2599ffc567f45f63fc46" title="Start device profiling." alt="" coords="459,136,628,177"/>
+<area shape="rect" id="node9" href="$d0/dbe/namespacedevice.html#a554e3262eeb04d882ebef52240304e32" title="Stop device profiling." alt="" coords="441,267,645,294"/>
+</map>

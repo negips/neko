@@ -1,0 +1,11 @@
+<map id="bc::bc_list_add" name="bc::bc_list_add">
+<area shape="rect" id="node1" title="Add a condition to a list of boundary conditions." alt="" coords="695,101,813,127"/>
+<area shape="rect" id="node2" href="$d9/d33/namespacefluid__method.html#a6fe7ef74f445776066d97ddc8a7e5c4a" title="Initialize all components of the current scheme." alt="" coords="258,5,401,47"/>
+<area shape="rect" id="node4" href="$d9/d33/namespacefluid__method.html#abf89d6c47787ce59d9f15c88c686e9bd" title="Initialize common data for the current scheme." alt="" coords="475,64,647,105"/>
+<area shape="rect" id="node6" href="$dd/dd1/namespacehsmg.html#a203f4c75923462a923b3d5d38e90c896" title=" " alt="" coords="495,130,626,157"/>
+<area shape="rect" id="node7" href="$d7/de5/namespacescalar.html#a01a4bfab991d20cdc58325b13d0dbf19" title="Initialize boundary conditions." alt="" coords="477,181,644,223"/>
+<area shape="rect" id="node3" href="$d1/dcd/structfluid__method_1_1fluid__scheme__t.html#a7719b9dff0487bde42e6e4c78634160c" title=" " alt="" coords="5,39,184,80"/>
+<area shape="rect" id="node5" href="$d9/d33/namespacefluid__method.html#a57ffd86a87e9d8adeba3f0ae7625d8ea" title="Initialize all velocity related components of the current scheme." alt="" coords="258,71,401,112"/>
+<area shape="rect" id="node8" href="$d7/de5/namespacescalar.html#ac4a2775652de3471e182de6cba40a417" title="Initialize all related components of the current scheme." alt="" coords="232,189,427,215"/>
+<area shape="rect" id="node9" href="$dd/dd4/structscalar_1_1scalar__scheme__t.html#a56745585fd4509400fafa090e016220c" title=" " alt="" coords="11,181,178,223"/>
+</map>

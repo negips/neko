@@ -1,0 +1,13 @@
+<map id="bc::bc_list_free" name="bc::bc_list_free">
+<area shape="rect" id="node1" title="Deallocate a list of boundary conditions." alt="" coords="936,159,1056,186"/>
+<area shape="rect" id="node2" href="$d0/dc0/namespacebc.html#a52ed37bbb9188c0673416ffa5de4dc5e" title="Initialize a list of boundary conditions." alt="" coords="731,101,846,127"/>
+<area shape="rect" id="node10" href="$d9/d33/namespacefluid__method.html#aa1997e959322163f6034b1121adc5e3a" title="Deallocate a fluid formulation." alt="" coords="717,152,860,193"/>
+<area shape="rect" id="node11" href="$d7/de5/namespacescalar.html#a077b9acfe2a51d1b60e7189aab707e82" title="Deallocate a scalar formulation." alt="" coords="689,218,888,245"/>
+<area shape="rect" id="node3" href="$d9/d33/namespacefluid__method.html#a6fe7ef74f445776066d97ddc8a7e5c4a" title="Initialize all components of the current scheme." alt="" coords="244,5,387,47"/>
+<area shape="rect" id="node5" href="$d9/d33/namespacefluid__method.html#abf89d6c47787ce59d9f15c88c686e9bd" title="Initialize common data for the current scheme." alt="" coords="458,64,630,105"/>
+<area shape="rect" id="node7" href="$dd/dd1/namespacehsmg.html#a203f4c75923462a923b3d5d38e90c896" title=" " alt="" coords="479,130,609,157"/>
+<area shape="rect" id="node8" href="$d7/de5/namespacescalar.html#ac4a2775652de3471e182de6cba40a417" title="Initialize all related components of the current scheme." alt="" coords="447,181,641,207"/>
+<area shape="rect" id="node4" href="$d1/dcd/structfluid__method_1_1fluid__scheme__t.html#a7719b9dff0487bde42e6e4c78634160c" title=" " alt="" coords="5,39,184,80"/>
+<area shape="rect" id="node6" href="$d9/d33/namespacefluid__method.html#a57ffd86a87e9d8adeba3f0ae7625d8ea" title="Initialize all velocity related components of the current scheme." alt="" coords="244,71,387,112"/>
+<area shape="rect" id="node9" href="$dd/dd4/structscalar_1_1scalar__scheme__t.html#a56745585fd4509400fafa090e016220c" title=" " alt="" coords="232,173,399,215"/>
+</map>

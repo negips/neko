@@ -1,0 +1,4 @@
+<map id="mesh::mesh_get_local_edge" name="mesh::mesh_get_local_edge">
+<area shape="rect" id="node1" title="Return the local id of an edge e." alt="" coords="233,13,440,39"/>
+<area shape="rect" id="node2" href="$d1/dca/interfacemesh_1_1mesh__get__global.html#a3bee88f1422a7a01287e052871ccf051" title="Return the global id of an edge e." alt="" coords="5,5,185,47"/>
+</map>

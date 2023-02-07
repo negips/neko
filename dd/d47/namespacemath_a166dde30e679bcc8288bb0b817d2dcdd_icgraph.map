@@ -1,0 +1,25 @@
+<map id="math::rzero" name="math::rzero">
+<area shape="rect" id="node1" title="Zero a real vector." alt="" coords="1067,433,1164,459"/>
+<area shape="rect" id="node2" href="$dd/d2f/namespacebicgstab.html#afdcb9c0f169349daf77759d283479c43" title="Bi&#45;Conjugate Gradient Stabilized method solve." alt="" coords="845,5,985,47"/>
+<area shape="rect" id="node3" href="$d2/d10/namespacecacg.html#a96a12044cfb692eb6d097ee3ed4aeda0" title="S&#45;step CA PCG solve." alt="" coords="849,71,981,98"/>
+<area shape="rect" id="node4" href="$d9/df6/namespacecg.html#aa74f8eea3f12b0f69c7eae810e63bf96" title="Standard PCG solve." alt="" coords="864,122,967,149"/>
+<area shape="rect" id="node5" href="$d6/dbe/namespacecoefs.html#a7109166ad05f1f18a62a9b96be52900e" title=" " alt="" coords="836,173,995,215"/>
+<area shape="rect" id="node7" href="$d3/d06/namespaceprojection.html#ac63a40c6adff939561cd8b6b8432d1e4" title=" " alt="" coords="819,239,1012,266"/>
+<area shape="rect" id="node9" href="$d9/dfb/namespaceext__bdf__scheme.html#aefb7b3a8546387e9c929a7f9eca17a56" title="Compute backward&#45;differentiation coefficients of order NBD." alt="" coords="834,291,997,332"/>
+<area shape="rect" id="node10" href="$d3/d4c/namespacefdm.html#af3a1a3b08ecd8ff4dd376ac7afaa555f" title=" " alt="" coords="604,711,715,738"/>
+<area shape="rect" id="node12" href="$dd/dd2/namespacedofmap.html#a1036efd4469d06921a6eacca861cad39" title="Extend 2D faces into interior via gordon hall gh_type: 1 &#45; vertex only 2 &#45; vertex and faces." alt="" coords="812,357,1019,383"/>
+<area shape="rect" id="node16" href="$dd/dd2/namespacedofmap.html#ae710cdf2efdddfe06dfd930addd83c84" title="Extend faces into interior via gordon hall gh_type: 1 &#45; vertex only &#160;&#160;2 &#45; vertex and edges 3 &#45; vertex..." alt="" coords="812,407,1019,434"/>
+<area shape="rect" id="node17" href="$dc/d48/namespacegmres.html#a96f21cb206d8da8611f3c630ae4459ca" title="Standard GMRES solve." alt="" coords="838,509,993,535"/>
+<area shape="rect" id="node18" href="$d9/d5a/namespaceopr__xsmm.html#acd8813ad0719f1353d493f684bfcdca6" title=" " alt="" coords="816,559,1015,586"/>
+<area shape="rect" id="node19" href="$de/d49/namespacepipecg.html#ae519e8f58edbf66c6b746e28363de31f" title="Pipelined PCG solve." alt="" coords="836,610,995,637"/>
+<area shape="rect" id="node20" href="$d3/d06/namespaceprojection.html#afa912cf217031bb8243a7e5d50c6f511" title=" " alt="" coords="821,661,1009,687"/>
+<area shape="rect" id="node21" href="$d2/d37/namespaceschwarz.html#a5226a484ae3c95e55535e3b33e4fc15c" title="setup weights" alt="" coords="558,762,761,789"/>
+<area shape="rect" id="node22" href="$dc/d5b/namespacefast3d.html#a71d142b2e4b813e2a446dc2cae7d47a4" title="Generate matrices for single element, 1D operators: a = Laplacian b = diagonal mass matrix c = convec..." alt="" coords="855,711,975,738"/>
+<area shape="rect" id="node23" href="$d5/d6a/namespacegmres__sx.html#a9c2ada127fe243736199ecbeb712c3ea" title="Standard PCG solve." alt="" coords="837,813,993,855"/>
+<area shape="rect" id="node6" href="$db/d12/interfacecoefs_1_1coef__init.html#a5757b53f99ce4d7e714e42a74e47feab" title="Initialize coefficients." alt="" coords="581,173,738,215"/>
+<area shape="rect" id="node8" href="$d3/d06/namespaceprojection.html#ab9388020e6233dbfc903db3a50502bd6" title=" " alt="" coords="555,239,764,266"/>
+<area shape="rect" id="node11" href="$d2/d37/namespaceschwarz.html#ae614e2a33b051d6843ac45bcff07c6b6" title=" " alt="" coords="312,737,476,763"/>
+<area shape="rect" id="node13" href="$dd/dd2/namespacedofmap.html#a14be7fe99925dc0fb0e2e30c0d654b44" title=" " alt="" coords="563,382,755,409"/>
+<area shape="rect" id="node14" href="$dd/dd2/namespacedofmap.html#a5d369623e2bb954910d6741afd4e93a8" title="Generate x,y,z&#45;coordinates for all dofs." alt="" coords="281,382,507,409"/>
+<area shape="rect" id="node15" href="$d0/df0/structdofmap_1_1dofmap__t.html#ad6ff31d68c77f1c7625d5b8cd5eb8328" title=" " alt="" coords="5,382,233,409"/>
+</map>

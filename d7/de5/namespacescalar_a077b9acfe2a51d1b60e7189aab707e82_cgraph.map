@@ -1,0 +1,8 @@
+<map id="scalar::scalar_scheme_free" name="scalar::scalar_scheme_free">
+<area shape="rect" id="node1" title="Deallocate a scalar formulation." alt="" coords="5,97,204,124"/>
+<area shape="rect" id="node2" href="$d0/dc0/namespacebc.html#a70aeff826889ae0f54bd98cfacb0decb" title="Deallocate a list of boundary conditions." alt="" coords="273,5,393,32"/>
+<area shape="rect" id="node3" href="$d9/d77/namespacekrylov__fctry.html#a1fe7494eabaed2f58223e03688ef839f" title="Destroy an interative Krylov solver." alt="" coords="259,57,407,98"/>
+<area shape="rect" id="node4" href="$dc/d51/namespaceprecon__fctry.html#a18ffcb1756eab1b82266908473cf1f99" title="Destroy a preconditioner." alt="" coords="256,122,411,163"/>
+<area shape="rect" id="node5" href="$de/dcb/namespacesource__scalar.html#a6b4bf569b1eae353428fae0a54bc89be" title="Deallocate a source_scalar term f." alt="" coords="252,187,415,229"/>
+<area shape="rect" id="node6" href="$d0/dbe/namespacedevice.html#ababbe600c44ba18cd715ba8e41252e0a" title="Deallocate memory on the device." alt="" coords="463,195,612,221"/>
+</map>

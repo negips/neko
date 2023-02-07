@@ -1,0 +1,8 @@
+<map id="device::device_memcpy_common" name="device::device_memcpy_common">
+<area shape="rect" id="node1" title="Copy data between host and device." alt="" coords="233,136,413,177"/>
+<area shape="rect" id="node2" href="$d6/dac/interfacedevice_1_1device__memcpy.html#a432c74c90552847ec6261af226b57c66" title="Copy data between host and device (or device and device) (c&#45;pointers)" alt="" coords="5,5,185,47"/>
+<area shape="rect" id="node3" href="$d6/dac/interfacedevice_1_1device__memcpy.html#a80ce0d995fbe9a8c7b9e0725f90bc35e" title="Copy data between host and device (rank 1 arrays)" alt="" coords="5,71,185,112"/>
+<area shape="rect" id="node4" href="$d6/dac/interfacedevice_1_1device__memcpy.html#a30b9258f92df3b1ef8e513bd1f3f51ee" title="Copy data between host and device (rank 2 arrays)" alt="" coords="5,136,185,177"/>
+<area shape="rect" id="node5" href="$d6/dac/interfacedevice_1_1device__memcpy.html#a6420d94782d3aea429d1b3b9791eb436" title="Copy data between host and device (rank 3 arrays)" alt="" coords="5,201,185,243"/>
+<area shape="rect" id="node6" href="$d6/dac/interfacedevice_1_1device__memcpy.html#aeefbb4fb6c6327804520f116db007f71" title="Copy data between host and device (rank 4 arrays)" alt="" coords="5,267,185,308"/>
+</map>

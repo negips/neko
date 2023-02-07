@@ -1,0 +1,4 @@
+<map id="mesh::mesh_reset_periodic_ids" name="mesh::mesh_reset_periodic_ids">
+<area shape="rect" id="node1" title="Reset ids of periodic points to their original ids." alt="" coords="5,5,232,32"/>
+<area shape="rect" id="node2" href="$db/dfc/namespacemesh.html#ae76b7e632893c91a23429ffede647f28" title="Get original ids of periodic points." alt="" coords="280,5,476,32"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="mesh::mesh_init_common" name="mesh::mesh_init_common">
+<area shape="rect" id="node1" title=" " alt="" coords="228,46,423,73"/>
+<area shape="rect" id="node2" href="$dc/d4a/interfacemesh_1_1mesh__init.html#a27fd44b7b576bbaf56019989d10c91be" title="Initialise a mesh m based on a distribution dist." alt="" coords="5,5,180,47"/>
+<area shape="rect" id="node3" href="$dc/d4a/interfacemesh_1_1mesh__init.html#a2c9c766d0c4b380390b141533381eaed" title="Initialise a mesh m with nelv elements." alt="" coords="5,71,180,112"/>
+</map>

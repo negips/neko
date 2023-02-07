@@ -1,0 +1,11 @@
+<map id="opgrad_kernel" name="opgrad_kernel">
+<area shape="rect" id="node1" title=" " alt="" coords="825,143,940,170"/>
+<area shape="rect" id="node2" href="$d0/d82/opr__opgrad_8c.html#a8844437d901cf613744a5f9b55d1a72c" title=" " alt="" coords="660,143,777,170"/>
+<area shape="rect" id="node3" href="$d3/d4d/namespaceopr__device.html#a72a56712c1e3529319ddb45ced751a88" title=" " alt="" coords="440,136,612,177"/>
+<area shape="rect" id="node4" href="$dd/d30/namespaceoperators.html#a3bb0b2a911e0cd08e32a255510d65c84" title="Equals wgradm1 in nek5000. Gradient of velocity vectors." alt="" coords="255,143,392,170"/>
+<area shape="rect" id="node5" href="$d3/d69/namespaceadvection.html#a9a192223b8bf6699ce00127b3b2979f1" title="Eulerian scheme, add convection term to forcing function at current time step." alt="" coords="5,5,207,47"/>
+<area shape="rect" id="node6" href="$d6/d21/namespacefluid__volflow.html#ac3ad0b24a9e0850b5ca05afa2de88691" title="Compute flow adjustment." alt="" coords="33,71,179,112"/>
+<area shape="rect" id="node7" href="$d2/de4/namespacepnpn__res__cpu.html#a3c38f8c07954e340c64b5a8fdf25dce0" title=" " alt="" coords="21,136,191,177"/>
+<area shape="rect" id="node8" href="$d8/dea/namespacepnpn__res__device.html#a04a3b5f3a84d993cdd609c2b06232895" title=" " alt="" coords="11,201,201,243"/>
+<area shape="rect" id="node9" href="$d4/da3/namespacepnpn__res__sx.html#adbf62a9c0a1037b341a38dbb6e63a604" title=" " alt="" coords="21,267,191,308"/>
+</map>

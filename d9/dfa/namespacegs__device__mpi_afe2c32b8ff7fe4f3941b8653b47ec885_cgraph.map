@@ -1,0 +1,4 @@
+<map id="gs_device_mpi::gs_device_mpi_init" name="gs_device_mpi::gs_device_mpi_init">
+<area shape="rect" id="node1" title="Initialise MPI based communication method." alt="" coords="5,5,197,47"/>
+<area shape="rect" id="node2" href="$d0/dbe/namespacedevice.html#a35effe17cddadd230f623eb47e603c9f" title="Create a device stream/command queue." alt="" coords="245,5,415,47"/>
+</map>

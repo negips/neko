@@ -1,0 +1,6 @@
+<map id="field::field_init::field_init_external_dof" name="field::field_init::field_init_external_dof">
+<area shape="rect" id="node1" title="Initialize a field f on the mesh msh using an internal dofmap." alt="" coords="5,23,172,65"/>
+<area shape="rect" id="node2" href="$dc/da9/namespacefield.html#a64d6cfe41dac9b6826f987eb0a92947f" title="Deallocate a field f." alt="" coords="250,5,369,32"/>
+<area shape="rect" id="node4" href="$dc/da9/namespacefield.html#a64b985cd925e31c37472309d64f82d85" title="Initialize a field f." alt="" coords="220,56,399,83"/>
+<area shape="rect" id="node3" href="$d0/dbe/namespacedevice.html#ababbe600c44ba18cd715ba8e41252e0a" title="Deallocate memory on the device." alt="" coords="447,5,596,32"/>
+</map>

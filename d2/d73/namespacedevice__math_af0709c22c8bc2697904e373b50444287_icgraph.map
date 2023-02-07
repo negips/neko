@@ -1,0 +1,9 @@
+<map id="device_math::device_col2" name="device_math::device_col2">
+<area shape="rect" id="node1" title=" " alt="" coords="427,71,617,98"/>
+<area shape="rect" id="node2" href="$d2/da7/namespacedevice__jacobi.html#abcae239f5ab6ef4a8a597e7cca1d804b" title=" " alt="" coords="216,5,379,47"/>
+<area shape="rect" id="node4" href="$dd/dd1/namespacehsmg.html#a1c5ebdeb1e0caae9ec828b3f7e5bd7a0" title="The h1mg preconditioner from Nek5000." alt="" coords="225,71,369,98"/>
+<area shape="rect" id="node5" href="$d2/d13/namespaceflow__ic.html#a9d1d885167a393ccb448d1a90f1530d5" title=" " alt="" coords="224,123,371,164"/>
+<area shape="rect" id="node3" href="$d2/da7/namespacedevice__jacobi.html#a08dd6669e156ff25024b500bf81a5106" title=" " alt="" coords="5,5,168,47"/>
+<area shape="rect" id="node6" href="$d5/d04/interfaceflow__ic_1_1set__flow__ic.html#aa5c900e30a45a6ed61c876b4ce368b50" title="Set initial flow condition (builtin)" alt="" coords="13,96,160,137"/>
+<area shape="rect" id="node7" href="$d5/d04/interfaceflow__ic_1_1set__flow__ic.html#adae7fa3c28ad065d2dd29d0ac26d2afa" title="Set intial flow condition (user defined)" alt="" coords="13,161,160,203"/>
+</map>

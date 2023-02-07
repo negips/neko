@@ -1,0 +1,18 @@
+<map id="space::space_compute_dist" name="space::space_compute_dist">
+<area shape="rect" id="node1" title=" " alt="" coords="977,143,1179,169"/>
+<area shape="rect" id="node2" href="$d5/d0d/namespacespace.html#aea7cdf9a8933056da79e3b73f4e0ed49" title="Initialize a function space s with given polynomial dimensions." alt="" coords="795,143,929,169"/>
+<area shape="rect" id="node3" href="$dd/dd2/namespacedofmap.html#a14be7fe99925dc0fb0e2e30c0d654b44" title=" " alt="" coords="555,23,747,49"/>
+<area shape="rect" id="node6" href="$d9/d33/namespacefluid__method.html#abf89d6c47787ce59d9f15c88c686e9bd" title="Initialize common data for the current scheme." alt="" coords="565,106,737,147"/>
+<area shape="rect" id="node10" href="$d3/d69/namespaceadvection.html#a155e772f99b667b81fe8a8c30c6aedb7" title=" " alt="" coords="566,172,735,199"/>
+<area shape="rect" id="node16" href="$d2/d37/namespaceschwarz.html#ae614e2a33b051d6843ac45bcff07c6b6" title=" " alt="" coords="569,223,733,249"/>
+<area shape="rect" id="node4" href="$dd/dd2/namespacedofmap.html#a5d369623e2bb954910d6741afd4e93a8" title="Generate x,y,z&#45;coordinates for all dofs." alt="" coords="281,5,507,32"/>
+<area shape="rect" id="node5" href="$d0/df0/structdofmap_1_1dofmap__t.html#ad6ff31d68c77f1c7625d5b8cd5eb8328" title=" " alt="" coords="5,5,233,32"/>
+<area shape="rect" id="node7" href="$d9/d33/namespacefluid__method.html#a6fe7ef74f445776066d97ddc8a7e5c4a" title="Initialize all components of the current scheme." alt="" coords="323,57,465,98"/>
+<area shape="rect" id="node9" href="$d9/d33/namespacefluid__method.html#a57ffd86a87e9d8adeba3f0ae7625d8ea" title="Initialize all velocity related components of the current scheme." alt="" coords="323,122,465,163"/>
+<area shape="rect" id="node8" href="$d1/dcd/structfluid__method_1_1fluid__scheme__t.html#a7719b9dff0487bde42e6e4c78634160c" title=" " alt="" coords="30,57,209,98"/>
+<area shape="rect" id="node11" href="$d3/d69/namespaceadvection.html#a27316124e9b4a37c9ae00ec700953ed4" title=" " alt="" coords="315,187,473,229"/>
+<area shape="rect" id="node12" href="$df/d60/interfaceadvection_1_1apply__scalar__adv.html#a3582fe8a985753d091906858b3c12178" title=" " alt="" coords="31,122,207,163"/>
+<area shape="rect" id="node13" href="$de/d71/namespacefluid__plan4.html#afa0ce822bf2afdbd6fc948fa389c922e" title=" " alt="" coords="55,187,184,229"/>
+<area shape="rect" id="node14" href="$dc/da3/namespacefluid__pnpn.html#a2b7045443985c1276f51c9de2e9ced25" title=" " alt="" coords="23,253,215,280"/>
+<area shape="rect" id="node15" href="$db/d56/namespacescalar__pnpn.html#ab5943b1bd76c6a3ecf6d43f56c8dd85a" title=" " alt="" coords="46,305,193,346"/>
+</map>

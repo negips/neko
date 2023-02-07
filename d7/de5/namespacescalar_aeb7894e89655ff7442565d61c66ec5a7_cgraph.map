@@ -1,0 +1,5 @@
+<map id="scalar::scalar_scheme_solver_factory" name="scalar::scalar_scheme_solver_factory">
+<area shape="rect" id="node1" title="Initialize a linear solver." alt="" coords="5,5,172,47"/>
+<area shape="rect" id="node2" href="$d9/d77/namespacekrylov__fctry.html#ac41dc022d96b8708532ee66f3a6981c5" title="Initialize an interative Krylov solver." alt="" coords="220,5,368,47"/>
+<area shape="rect" id="node3" href="$d9/d77/namespacekrylov__fctry.html#a1fe7494eabaed2f58223e03688ef839f" title="Destroy an interative Krylov solver." alt="" coords="416,5,564,47"/>
+</map>

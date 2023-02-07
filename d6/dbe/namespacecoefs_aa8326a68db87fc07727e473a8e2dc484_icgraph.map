@@ -1,0 +1,4 @@
+<map id="coefs::coef_generate_area_and_normal" name="coefs::coef_generate_area_and_normal">
+<area shape="rect" id="node1" title="Generate facet area and surface normals." alt="" coords="211,5,369,47"/>
+<area shape="rect" id="node2" href="$db/d12/interfacecoefs_1_1coef__init.html#a5757b53f99ce4d7e714e42a74e47feab" title="Initialize coefficients." alt="" coords="5,5,163,47"/>
+</map>

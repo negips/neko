@@ -1,0 +1,9 @@
+<map id="source::source_free" name="source::source_free">
+<area shape="rect" id="node1" title="Deallocate a source term f." alt="" coords="835,42,984,69"/>
+<area shape="rect" id="node2" href="$d9/d33/namespacefluid__method.html#aa1997e959322163f6034b1121adc5e3a" title="Deallocate a fluid formulation." alt="" coords="643,5,786,47"/>
+<area shape="rect" id="node3" href="$da/d7d/namespacesource.html#a6460fdf8da4e8e56dfc626b69c469a91" title="Initialize a source term f." alt="" coords="643,71,787,98"/>
+<area shape="rect" id="node4" href="$d9/d33/namespacefluid__method.html#abf89d6c47787ce59d9f15c88c686e9bd" title="Initialize common data for the current scheme." alt="" coords="423,64,595,105"/>
+<area shape="rect" id="node5" href="$d9/d33/namespacefluid__method.html#a6fe7ef74f445776066d97ddc8a7e5c4a" title="Initialize all components of the current scheme." alt="" coords="232,31,375,72"/>
+<area shape="rect" id="node7" href="$d9/d33/namespacefluid__method.html#a57ffd86a87e9d8adeba3f0ae7625d8ea" title="Initialize all velocity related components of the current scheme." alt="" coords="232,96,375,137"/>
+<area shape="rect" id="node6" href="$d1/dcd/structfluid__method_1_1fluid__scheme__t.html#a7719b9dff0487bde42e6e4c78634160c" title=" " alt="" coords="5,64,184,105"/>
+</map>
