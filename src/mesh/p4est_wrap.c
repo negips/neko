@@ -6,12 +6,12 @@
  *  Author: Adam Peplinski
  */
 
-// libsc speciffic definitions
+/* libsc speciffic definitions */
 #define SC_ENABLE_MPI
 #define SC_ENABLE_MPIIO
 
-// p4est speciffic definitions
-// This is dimension rleated; for now 3D only
+/* p4est speciffic definitions
+* This is dimension rleated; for now 3D only */
 #define N_DIM 3
 
 #include <stdio.h>
