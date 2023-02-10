@@ -1520,7 +1520,8 @@ contains
     allocate(msh%points(nin+npe+nhf+nhe))
     ! independent nodes; the only ones with direct global mapping
     do il = 1, nin
-       msh%points(il) = point_t(p4%indn%coord(:, il), il)
+       itmp = nin + il ! this because point constructor has id with intent(inout) attribute
+       msh%points(il) = point_t(p4%indn%coord(:, il), itmp)
     end do
     ! periodic nodes; global id through mapping to independent nodes (independent on element position)
     do il = 1, npe
